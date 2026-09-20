@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scraper (Python)
+scraper/.venv
+scraper/__pycache__
+scraper/candidatos.json
+
+# firecrawl CLI cache
+.firecrawl/

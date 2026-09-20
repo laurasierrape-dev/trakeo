@@ -1,0 +1,69 @@
+name: Scraper de prospección (Firecrawl)
+
+on:
+  workflow_dispatch:
+    inputs:
+      categoria:
+        description: "Categoría de negocio (deja vacío si usas 'url')"
+        required: false
+      ciudad:
+        description: "Ciudad (con 'categoria', busca en Google Maps)"
+        required: false
+      url:
+        description: "O: cualquier página que el consultor indique como fuente"
+        required: false
+      limit:
+        description: "Máximo de candidatos a descubrir"
+        required: false
+        default: "20"
+      max_credits:
+        description: "Tope de créditos de Firecrawl por llamada de agente"
+        required: false
+        default: "100"
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias Python
+        working-directory: scraper
+        run: pip install -r requirements.txt
+
+      - name: Descubrimiento (Firecrawl)
+        working-directory: scraper
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        run: |
+          if [ -n "${{ inputs.url }}" ]; then
+            python discover_firecrawl.py --url "${{ inputs.url }}" \
+              --limit "${{ inputs.limit }}" --max-credits "${{ inputs.max_credits }}" \
+              --out candidatos.json
+          else
+            python discover_firecrawl.py --categoria "${{ inputs.categoria }}" \
+              --ciudad "${{ inputs.ciudad }}" --limit "${{ inputs.limit }}" \
+              --max-credits "${{ inputs.max_credits }}" --out candidatos.json
+          fi
+
+      - name: Enriquecimiento (RUES vía Firecrawl) y carga a Supabase
+        working-directory: scraper
+        env:
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python enrich_firecrawl.py --in candidatos.json --max-credits "${{ inputs.max_credits }}"
+
+      - name: Subir candidatos.json como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidatos
+          path: scraper/candidatos.json
