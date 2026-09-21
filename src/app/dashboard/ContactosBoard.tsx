@@ -1,11 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChatFiltro } from '@/components/ChatFiltro'
 import { ContactoRowMenu } from './ContactoRowMenu'
 import { exportarCSV } from '@/lib/csv'
+import { actualizarTemperaturaMasivo, eliminarContactosMasivo } from './actions'
 import type { Contacto } from '@/lib/types'
+
+const OPCIONES_TEMPERATURA: Contacto['temperatura'][] = ['frio', 'interesado', 'vinculado']
 
 const PILL_ESTILO: Record<Contacto['temperatura'], { backgroundColor: string; color: string }> = {
   vinculado: { backgroundColor: '#c5f54a', color: '#0d2e23' },
@@ -30,6 +33,9 @@ export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
   const router = useRouter()
   const [idsIA, setIdsIA] = useState<Set<string> | null>(null)
   const [busqueda, setBusqueda] = useState('')
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   const stats = useMemo(
     () => ({
@@ -46,6 +52,26 @@ export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
     if (busqueda && !c.nombre_empresa.toLowerCase().includes(busqueda.toLowerCase())) return false
     return true
   })
+
+  function toggleSeleccionado(id: string) {
+    setSeleccionados(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSeleccionarTodo() {
+    setSeleccionados(prev =>
+      prev.size === filtrados.length ? new Set() : new Set(filtrados.map(c => c.id))
+    )
+  }
+
+  function limpiarSeleccion() {
+    setSeleccionados(new Set())
+    setConfirmandoEliminar(false)
+  }
 
   return (
     <div>
@@ -90,6 +116,75 @@ export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
         </button>
       </div>
 
+      {seleccionados.size > 0 && (
+        <div
+          className="flex flex-wrap items-center gap-3 rounded-xl p-3 mb-4"
+          style={{ backgroundColor: 'white', border: '1px solid #0d2e2315' }}
+        >
+          <span className="text-xs" style={{ color: '#0d2e2360' }}>
+            {seleccionados.size} seleccionado(s)
+          </span>
+
+          <div className="flex items-center gap-1">
+            {OPCIONES_TEMPERATURA.map(opcion => (
+              <button
+                key={opcion}
+                disabled={isPending}
+                onClick={() =>
+                  startTransition(async () => {
+                    await actualizarTemperaturaMasivo(Array.from(seleccionados), opcion)
+                    limpiarSeleccion()
+                  })
+                }
+                className="text-xs rounded-full px-3 py-1.5 cursor-pointer disabled:opacity-50 capitalize"
+                style={{ border: '1px solid #0d2e2330', color: '#0d2e2380' }}
+              >
+                {opcion}
+              </button>
+            ))}
+          </div>
+
+          <div className="h-4 w-px" style={{ backgroundColor: '#0d2e2320' }} />
+
+          {!confirmandoEliminar ? (
+            <button
+              onClick={() => setConfirmandoEliminar(true)}
+              className="text-xs cursor-pointer"
+              style={{ color: '#b91c1c' }}
+            >
+              Eliminar seleccionados
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: '#0d2e2370' }}>
+                ¿Eliminar {seleccionados.size}? Los que vengan de prospecto/hallazgo volverán a revisión.
+              </span>
+              <button
+                disabled={isPending}
+                onClick={() =>
+                  startTransition(async () => {
+                    await eliminarContactosMasivo(Array.from(seleccionados))
+                    limpiarSeleccion()
+                  })
+                }
+                className="text-xs font-semibold cursor-pointer disabled:opacity-50"
+                style={{ color: '#b91c1c' }}
+              >
+                {isPending ? 'Eliminando...' : 'Sí, eliminar'}
+              </button>
+              <button
+                disabled={isPending}
+                onClick={() => setConfirmandoEliminar(false)}
+                className="text-xs cursor-pointer disabled:opacity-50"
+                style={{ color: '#0d2e2360' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <div
         className="rounded-2xl overflow-hidden"
         style={{ backgroundColor: 'white', border: '1px solid #0d2e2310' }}
@@ -102,6 +197,14 @@ export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: '1px solid #0d2e2315' }}>
+                <th className="px-4 py-3 text-xs" style={{ color: '#0d2e2360' }}>
+                  <input
+                    type="checkbox"
+                    checked={seleccionados.size > 0 && seleccionados.size === filtrados.length}
+                    onChange={toggleSeleccionarTodo}
+                    className="cursor-pointer"
+                  />
+                </th>
                 {['Empresa', 'Representante', 'Teléfono', 'Temperatura', 'Próximo toque', ''].map(h => (
                   <th
                     key={h}
@@ -121,6 +224,14 @@ export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
                   className="cursor-pointer transition-colors"
                   style={{ borderBottom: '1px solid #0d2e2308' }}
                 >
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={seleccionados.has(c.id)}
+                      onChange={() => toggleSeleccionado(c.id)}
+                      className="cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-3 font-medium" style={{ color: '#0d2e23' }}>
                     {c.nombre_empresa}
                   </td>

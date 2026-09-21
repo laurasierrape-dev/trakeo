@@ -4,7 +4,15 @@ import { useState, useTransition } from 'react'
 import { aprobarHallazgo, descartarHallazgo } from '../actions'
 import type { Hallazgo } from '@/lib/types'
 
-export function HallazgoCard({ hallazgo }: { hallazgo: Hallazgo }) {
+export function HallazgoCard({
+  hallazgo,
+  selected,
+  onToggleSelected,
+}: {
+  hallazgo: Hallazgo
+  selected: boolean
+  onToggleSelected: () => void
+}) {
   const [hidden, setHidden] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -15,9 +23,17 @@ export function HallazgoCard({ hallazgo }: { hallazgo: Hallazgo }) {
       className="rounded-xl p-4"
       style={{ backgroundColor: 'white', border: '1px solid #0d2e2310' }}
     >
-      <p className="text-sm font-medium" style={{ color: '#0d2e23' }}>
-        {hallazgo.nombre_empresa}
-      </p>
+      <div className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelected}
+          className="mt-0.5 cursor-pointer"
+        />
+        <p className="text-sm font-medium" style={{ color: '#0d2e23' }}>
+          {hallazgo.nombre_empresa}
+        </p>
+      </div>
       <div className="text-xs mt-1 flex flex-col gap-0.5" style={{ color: '#0d2e2370' }}>
         {hallazgo.representante && <span>Representante: {hallazgo.representante}</span>}
         {hallazgo.telefono && <span>Tel: {hallazgo.telefono}</span>}

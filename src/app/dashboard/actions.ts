@@ -44,6 +44,43 @@ export async function descartarProspecto(prospectoId: string) {
   revalidatePath('/dashboard/prospectos')
 }
 
+export async function aprobarProspectosMasivo(prospectos: Prospecto[]) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { error: insertError } = await supabase.from('contactos').insert(
+    prospectos.map(p => ({
+      prospecto_id: p.id,
+      nombre_empresa: p.razon_social,
+      representante: p.representante,
+      telefono: p.telefono,
+      descripcion: p.descripcion,
+      consultor_id: user.id,
+    }))
+  )
+  if (insertError) throw new Error(insertError.message)
+
+  const { error: updateError } = await supabase
+    .from('prospectos')
+    .update({ estado: 'aprobado' })
+    .in('id', prospectos.map(p => p.id))
+  if (updateError) throw new Error(updateError.message)
+
+  revalidatePath('/dashboard/prospectos')
+  revalidatePath('/dashboard')
+}
+
+export async function descartarProspectosMasivo(ids: string[]) {
+  const supabase = await createClient()
+  const { error } = await supabase.from('prospectos').update({ estado: 'descartado' }).in('id', ids)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard/prospectos')
+}
+
 export async function eliminarContacto(contactoId: string) {
   const supabase = await createClient()
 
@@ -71,6 +108,42 @@ export async function eliminarContacto(contactoId: string) {
   }
 
   const { error: deleteError } = await supabase.from('contactos').delete().eq('id', contactoId)
+  if (deleteError) throw new Error(deleteError.message)
+
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/prospectos')
+  revalidatePath('/dashboard/scraping')
+}
+
+export async function eliminarContactosMasivo(contactoIds: string[]) {
+  const supabase = await createClient()
+
+  const { data: contactos, error: fetchError } = await supabase
+    .from('contactos')
+    .select('prospecto_id, hallazgo_id')
+    .in('id', contactoIds)
+  if (fetchError) throw new Error(fetchError.message)
+
+  const prospectoIds = (contactos ?? []).map(c => c.prospecto_id).filter(Boolean) as string[]
+  const hallazgoIds = (contactos ?? []).map(c => c.hallazgo_id).filter(Boolean) as string[]
+
+  if (prospectoIds.length > 0) {
+    const { error } = await supabase
+      .from('prospectos')
+      .update({ estado: 'sin_revisar' })
+      .in('id', prospectoIds)
+    if (error) throw new Error(error.message)
+  }
+
+  if (hallazgoIds.length > 0) {
+    const { error } = await supabase
+      .from('hallazgos')
+      .update({ estado: 'sin_revisar' })
+      .in('id', hallazgoIds)
+    if (error) throw new Error(error.message)
+  }
+
+  const { error: deleteError } = await supabase.from('contactos').delete().in('id', contactoIds)
   if (deleteError) throw new Error(deleteError.message)
 
   revalidatePath('/dashboard')
@@ -120,6 +193,45 @@ export async function descartarHallazgo(hallazgoId: string) {
   revalidatePath('/dashboard/scraping')
 }
 
+export async function aprobarHallazgosMasivo(hallazgos: Hallazgo[]) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { error: insertError } = await supabase.from('contactos').insert(
+    hallazgos.map(h => ({
+      hallazgo_id: h.id,
+      nombre_empresa: h.nombre_empresa,
+      representante: h.representante,
+      telefono: h.telefono,
+      email: h.email,
+      descripcion: h.descripcion,
+      notas: h.notas,
+      consultor_id: user.id,
+    }))
+  )
+  if (insertError) throw new Error(insertError.message)
+
+  const { error: updateError } = await supabase
+    .from('hallazgos')
+    .update({ estado: 'aprobado' })
+    .in('id', hallazgos.map(h => h.id))
+  if (updateError) throw new Error(updateError.message)
+
+  revalidatePath('/dashboard/scraping')
+  revalidatePath('/dashboard')
+}
+
+export async function descartarHallazgosMasivo(ids: string[]) {
+  const supabase = await createClient()
+  const { error } = await supabase.from('hallazgos').update({ estado: 'descartado' }).in('id', ids)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard/scraping')
+}
+
 export async function actualizarTemperatura(
   contactoId: string,
   temperatura: 'frio' | 'interesado' | 'vinculado'
@@ -132,6 +244,20 @@ export async function actualizarTemperatura(
   if (error) throw new Error(error.message)
 
   revalidatePath(`/dashboard/contactos/${contactoId}`)
+  revalidatePath('/dashboard')
+}
+
+export async function actualizarTemperaturaMasivo(
+  contactoIds: string[],
+  temperatura: 'frio' | 'interesado' | 'vinculado'
+) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('contactos')
+    .update({ temperatura, updated_at: new Date().toISOString() })
+    .in('id', contactoIds)
+  if (error) throw new Error(error.message)
+
   revalidatePath('/dashboard')
 }
 

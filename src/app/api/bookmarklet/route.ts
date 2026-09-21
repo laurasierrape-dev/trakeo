@@ -5,7 +5,10 @@ import { createClient } from '@supabase/supabase-js'
 // este modelo. 15,000 caracteres de contenido (~4,000-5,000 tokens con texto
 // en español) deja margen suficiente para el prompt y el schema del tool
 // sin pasarse — confirmado en vivo: 12,020 tokens solicitados ya excedía el
-// límite. Si la cuenta sube de tier, este número se puede subir.
+// límite. El bookmarklet manda un POST por página (no todo el recorrido en
+// uno solo), así que este tope es solo una salvaguarda por página individual,
+// no el límite del recorrido completo. Si la cuenta sube de tier, este
+// número se puede subir.
 const MAX_CONTENT_CHARS = 15_000
 
 const CORS_HEADERS = {
@@ -153,9 +156,29 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  if (prospectos.length > 0) {
+  // Dedup: un hallazgo con este nombre ya visto para este consultor (en
+  // cualquier estado — aprobado o descartado también cuenta como "ya visto")
+  // no se vuelve a insertar. Esto cubre tanto repetir la misma búsqueda en
+  // otro momento como las varias páginas de una misma corrida paginada.
+  const { data: existentes } = await supabase
+    .from('hallazgos')
+    .select('nombre_empresa')
+    .eq('consultor_id', tokenRow.consultor_id)
+
+  const nombresVistos = new Set(
+    (existentes ?? []).map(h => h.nombre_empresa.trim().toLowerCase())
+  )
+
+  const prospectosNuevos = prospectos.filter(p => {
+    const clave = p.nombre.trim().toLowerCase()
+    if (nombresVistos.has(clave)) return false
+    nombresVistos.add(clave)
+    return true
+  })
+
+  if (prospectosNuevos.length > 0) {
     await supabase.from('hallazgos').insert(
-      prospectos.map(p => {
+      prospectosNuevos.map(p => {
         const notas = [
           `Origen: ${url ?? 'desconocido'}`,
           p.facturacion ? `Facturación/ingresos: ${p.facturacion}` : null,
@@ -176,5 +199,5 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  return NextResponse.json({ ok: true, creados: prospectos.length }, { headers: CORS_HEADERS })
+  return NextResponse.json({ ok: true, creados: prospectosNuevos.length }, { headers: CORS_HEADERS })
 }

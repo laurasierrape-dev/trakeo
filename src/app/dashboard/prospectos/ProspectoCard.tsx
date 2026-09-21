@@ -4,7 +4,15 @@ import { useState, useTransition } from 'react'
 import { aprobarProspecto, descartarProspecto } from '../actions'
 import type { Prospecto } from '@/lib/types'
 
-export function ProspectoCard({ prospecto }: { prospecto: Prospecto }) {
+export function ProspectoCard({
+  prospecto,
+  selected,
+  onToggleSelected,
+}: {
+  prospecto: Prospecto
+  selected: boolean
+  onToggleSelected: () => void
+}) {
   const [hidden, setHidden] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -15,9 +23,17 @@ export function ProspectoCard({ prospecto }: { prospecto: Prospecto }) {
       className="rounded-xl p-4"
       style={{ backgroundColor: 'white', border: '1px solid #0d2e2310' }}
     >
-      <p className="text-sm font-medium" style={{ color: '#0d2e23' }}>
-        {prospecto.razon_social}
-      </p>
+      <div className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelected}
+          className="mt-0.5 cursor-pointer"
+        />
+        <p className="text-sm font-medium" style={{ color: '#0d2e23' }}>
+          {prospecto.razon_social}
+        </p>
+      </div>
       <div className="text-xs mt-1 flex flex-col gap-0.5" style={{ color: '#0d2e2370' }}>
         {prospecto.representante && <span>Representante: {prospecto.representante}</span>}
         {prospecto.telefono && <span>Tel: {prospecto.telefono}</span>}

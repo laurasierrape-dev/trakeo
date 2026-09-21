@@ -7,11 +7,17 @@ import { createClient } from '@/lib/supabase/server'
 import type { Hallazgo } from '@/lib/types'
 
 const MAX_PAGINAS_BOOKMARKLET = 10
-// Debe coincidir con MAX_CONTENT_CHARS en /api/bookmarklet/route.ts — el
-// límite real está en cuántos tokens acepta la cuenta de Groq por minuto,
-// no en lo que el bookmarklet pueda juntar. Sin esto, seguiría clickeando
-// páginas que el servidor igual va a descartar.
+// Tope de seguridad por página individual — no es el límite del recorrido
+// completo (ver PAUSA_ENTRE_PAGINAS_MS más abajo). Debe coincidir con
+// MAX_CONTENT_CHARS en /api/bookmarklet/route.ts.
 const MAX_CHARS_BOOKMARKLET = 15_000
+// El límite de la cuenta de Groq es 8,000 tokens/minuto ACUMULADOS — mandar
+// varios POSTs seguidos sigue sumando aunque cada uno sea chico. Por eso el
+// bookmarklet manda un POST por página en vez de juntar todo al final, y
+// espera este tiempo extra entre página y página para mantener el ritmo de
+// tokens/minuto bajo el límite. A costa de que el recorrido completo tarde
+// más (10 páginas ≈ 1.5-2 min) en vez de fallar con un 413.
+const PAUSA_ENTRE_PAGINAS_MS = 6_000
 
 function construirBookmarklet(origin: string, token: string): string {
   const codigo = `(async function(){
@@ -19,8 +25,9 @@ function construirBookmarklet(origin: string, token: string): string {
     var paginasTexto = prompt("¿Cuántas páginas quieres recorrer como máximo? (1-${MAX_PAGINAS_BOOKMARKLET}, deja vacío para ${MAX_PAGINAS_BOOKMARKLET})") || "";
     var MAX_PAGINAS = Math.min(Math.max(parseInt(paginasTexto, 10) || ${MAX_PAGINAS_BOOKMARKLET}, 1), ${MAX_PAGINAS_BOOKMARKLET});
     var MAX_CHARS = ${MAX_CHARS_BOOKMARKLET};
-    var textos = [document.body.innerText];
-    var paginas = 1;
+    var paginas = 0;
+    var creadosTotal = 0;
+    var fallidas = 0;
 
     function deshabilitado(el) {
       if (el.disabled || el.getAttribute('aria-disabled') === 'true') return true;
@@ -50,25 +57,30 @@ function construirBookmarklet(origin: string, token: string): string {
       return null;
     }
 
-    while (paginas < MAX_PAGINAS && textos.join('').length < MAX_CHARS) {
+    async function enviarPagina(texto) {
+      try {
+        var r = await fetch(${JSON.stringify(origin)} + "/api/bookmarklet", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ token: ${JSON.stringify(token)}, url: location.href, contenido: texto.slice(0, MAX_CHARS), pregunta: pregunta })
+        });
+        var data = await r.json();
+        if (data.ok) { creadosTotal += data.creados; } else { fallidas++; }
+      } catch (e) { fallidas++; }
+    }
+
+    while (paginas < MAX_PAGINAS) {
+      await enviarPagina(document.body.innerText);
+      paginas++;
+      if (paginas >= MAX_PAGINAS) break;
       var siguiente = buscarSiguiente();
       if (!siguiente) break;
       siguiente.click();
       await new Promise(function(r) { setTimeout(r, 1500); });
-      textos.push(document.body.innerText);
-      paginas++;
+      await new Promise(function(r) { setTimeout(r, ${PAUSA_ENTRE_PAGINAS_MS}); });
     }
 
-    var contenido = textos.join('\\n\\n---PAGINA---\\n\\n').slice(0, MAX_CHARS);
-
-    fetch(${JSON.stringify(origin)} + "/api/bookmarklet", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ token: ${JSON.stringify(token)}, url: location.href, contenido: contenido, pregunta: pregunta })
-    }).then(function(r){ return r.json(); }).then(function(data){
-      if (data.ok) { alert("Trakeo: " + data.creados + " hallazgo(s) para revisar en tu dashboard (recorrió " + paginas + " página(s))."); }
-      else { alert("Trakeo: " + (data.error || "error desconocido")); }
-    }).catch(function(){ alert("Trakeo: no se pudo conectar."); });
+    alert("Trakeo: " + creadosTotal + " hallazgo(s) nuevo(s) para revisar en tu dashboard (recorrió " + paginas + " página(s))" + (fallidas > 0 ? ", " + fallidas + " página(s) fallaron" : "") + ".");
   })()`.replace(/\s+/g, ' ')
 
   return `javascript:${encodeURIComponent(codigo)}`
@@ -119,7 +131,7 @@ export default async function ScrapingPage() {
       <div className="text-xs mb-6" style={{ color: '#0d2e2360' }}>
         <p className="mb-1">Qué hace: lee el texto visible de esa página y le pide a una IA que identifique prospectos.</p>
         <p className="mb-1">Qué NO hace: no guarda tu contraseña, no inicia sesión por ti, no navega otras páginas por su cuenta.</p>
-        <p>Te va a preguntar dos cosas: qué buscas (para que la IA filtre) y cuántas páginas recorrer (tú decides, hasta {MAX_PAGINAS_BOOKMARKLET}). Puede parar antes si el contenido llena el cupo por envío (normalmente 2-4 páginas) — si hay más, repite el clic desde donde se quedó.</p>
+        <p>Te va a preguntar dos cosas: qué buscas (para que la IA filtre) y cuántas páginas recorrer (tú decides, hasta {MAX_PAGINAS_BOOKMARKLET}). Manda cada página por separado para no exceder el límite de tu cuenta de IA, así que un recorrido de {MAX_PAGINAS_BOOKMARKLET} páginas puede tardar 1-2 minutos — no cierres la pestaña mientras corre. Si buscas lo mismo dos veces, no duplica lo que ya tienes.</p>
       </div>
 
       <RegenerarBoton />

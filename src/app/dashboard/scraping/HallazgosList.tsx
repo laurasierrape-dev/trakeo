@@ -1,15 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { HallazgoCard } from './HallazgoCard'
 import { ChatFiltro } from '@/components/ChatFiltro'
 import { exportarCSV } from '@/lib/csv'
+import { aprobarHallazgosMasivo, descartarHallazgosMasivo } from '../actions'
 import type { Hallazgo } from '@/lib/types'
 
 export function HallazgosList({ hallazgos }: { hallazgos: Hallazgo[] }) {
   const [idsIA, setIdsIA] = useState<Set<string> | null>(null)
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [isPending, startTransition] = useTransition()
 
   const filtrados = idsIA ? hallazgos.filter(h => idsIA.has(h.id)) : hallazgos
+
+  function toggleSeleccionado(id: string) {
+    setSeleccionados(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSeleccionarTodo() {
+    setSeleccionados(prev =>
+      prev.size === filtrados.length ? new Set() : new Set(filtrados.map(h => h.id))
+    )
+  }
+
+  const hallazgosSeleccionados = filtrados.filter(h => seleccionados.has(h.id))
 
   return (
     <div>
@@ -45,9 +65,62 @@ export function HallazgosList({ hallazgos }: { hallazgos: Hallazgo[] }) {
         </p>
       )}
 
+      {filtrados.length > 0 && (
+        <div className="flex items-center justify-between mb-3">
+          <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: '#0d2e2370' }}>
+            <input
+              type="checkbox"
+              checked={seleccionados.size > 0 && seleccionados.size === filtrados.length}
+              onChange={toggleSeleccionarTodo}
+              className="cursor-pointer"
+            />
+            Seleccionar todo ({filtrados.length})
+          </label>
+
+          {seleccionados.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: '#0d2e2360' }}>
+                {seleccionados.size} seleccionado(s)
+              </span>
+              <button
+                disabled={isPending}
+                onClick={() =>
+                  startTransition(async () => {
+                    await aprobarHallazgosMasivo(hallazgosSeleccionados)
+                    setSeleccionados(new Set())
+                  })
+                }
+                className="text-xs font-semibold rounded-full px-3 py-1.5 cursor-pointer disabled:opacity-50"
+                style={{ backgroundColor: '#c5f54a', color: '#0d2e23' }}
+              >
+                Aprobar seleccionados
+              </button>
+              <button
+                disabled={isPending}
+                onClick={() =>
+                  startTransition(async () => {
+                    await descartarHallazgosMasivo(Array.from(seleccionados))
+                    setSeleccionados(new Set())
+                  })
+                }
+                className="text-xs rounded-full px-3 py-1.5 cursor-pointer disabled:opacity-50"
+                style={{ border: '1px solid #0d2e2330', color: '#0d2e23a0' }}
+              >
+                Descartar seleccionados
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-3 md:grid-cols-2">
         {filtrados.map(h => (
-          <HallazgoCard key={h.id} hallazgo={h} />
+          <HallazgoCard
+            key={h.id}
+            hallazgo={h}
+            selected={seleccionados.has(h.id)}
+            onToggleSelected={() => toggleSeleccionado(h.id)}
+          />
         ))}
       </div>
     </div>
