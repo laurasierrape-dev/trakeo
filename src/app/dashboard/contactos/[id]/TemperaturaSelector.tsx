@@ -17,7 +17,7 @@ export function TemperaturaSelector({
 
   return (
     <div>
-      <p className="text-xs mb-1.5" style={{ color: '#f3efe560' }}>
+      <p className="text-xs mb-1.5" style={{ color: '#0d2e2360' }}>
         Temperatura
       </p>
       <div className="flex gap-1.5">
@@ -30,7 +30,7 @@ export function TemperaturaSelector({
             style={
               opcion === temperatura
                 ? { backgroundColor: '#c5f54a', color: '#0d2e23' }
-                : { border: '1px solid #f3efe540', color: '#f3efe5a0' }
+                : { border: '1px solid #0d2e2330', color: '#0d2e23a0' }
             }
           >
             {opcion}

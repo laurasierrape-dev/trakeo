@@ -2,16 +2,20 @@ import { headers } from 'next/headers'
 import { obtenerOCrearToken } from './actions'
 import { RegenerarBoton } from './RegenerarBoton'
 import { BookmarkletLink } from './BookmarkletLink'
+import { HallazgosList } from './HallazgosList'
+import { createClient } from '@/lib/supabase/server'
+import type { Hallazgo } from '@/lib/types'
 
 function construirBookmarklet(origin: string, token: string): string {
   const codigo = `(function(){
+    var pregunta = prompt("¿Qué buscas en esta página? (opcional)") || "";
     var contenido = document.body.innerText.slice(0, 60000);
     fetch(${JSON.stringify(origin)} + "/api/bookmarklet", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ token: ${JSON.stringify(token)}, url: location.href, contenido: contenido })
+      body: JSON.stringify({ token: ${JSON.stringify(token)}, url: location.href, contenido: contenido, pregunta: pregunta })
     }).then(function(r){ return r.json(); }).then(function(data){
-      if (data.ok) { alert("Trakeo: " + data.creados + " prospecto(s) agregado(s)."); }
+      if (data.ok) { alert("Trakeo: " + data.creados + " hallazgo(s) para revisar en tu dashboard."); }
       else { alert("Trakeo: " + (data.error || "error desconocido")); }
     }).catch(function(){ alert("Trakeo: no se pudo conectar."); });
   })()`.replace(/\s+/g, ' ')
@@ -28,12 +32,19 @@ export default async function ScrapingPage() {
 
   const bookmarkletHref = construirBookmarklet(origin, token)
 
+  const supabase = await createClient()
+  const { data: hallazgos } = await supabase
+    .from('hallazgos')
+    .select('*')
+    .eq('estado', 'sin_revisar')
+    .order('created_at', { ascending: false })
+
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold mb-1" style={{ color: '#f3efe5' }}>
+      <h1 className="text-xl font-semibold mb-1" style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}>
         Scraping desde tus propias fuentes
       </h1>
-      <p className="text-sm mb-6" style={{ color: '#f3efe580' }}>
+      <p className="text-sm mb-6" style={{ color: '#0d2e2380' }}>
         Si tienes acceso pago a una fuente de datos (ej. Orbis) con sesión ya iniciada en tu
         computador, usa este botón para traer prospectos de ahí — sin que Trakeo toque tu
         contraseña ni tu sesión.
@@ -41,26 +52,43 @@ export default async function ScrapingPage() {
 
       <div
         className="rounded-2xl p-6 mb-6"
-        style={{ backgroundColor: '#ffffff0d', border: '1px solid #f3efe520' }}
+        style={{ backgroundColor: 'white', border: '1px solid #0d2e2310' }}
       >
-        <p className="text-sm mb-4" style={{ color: '#f3efe5' }}>
+        <p className="text-sm mb-4" style={{ color: '#0d2e23' }}>
           1. Arrastra este botón a tu barra de marcadores:
         </p>
         <BookmarkletLink href={bookmarkletHref} />
-        <p className="text-sm mt-4" style={{ color: '#f3efe580' }}>
+        <p className="text-sm mt-4" style={{ color: '#0d2e2380' }}>
           2. Ve a cualquier página donde ya hayas iniciado sesión (ej. tus resultados de Orbis) y
           haz clic en ese botón desde tu barra de marcadores. Los prospectos que encuentre
-          aparecerán en tu <a href="/dashboard" style={{ color: '#c5f54a' }}>pipeline</a>.
+          aparecerán en tu <a href="/dashboard" style={{ color: '#186b54' }}>pipeline</a>.
         </p>
       </div>
 
-      <div className="text-xs mb-6" style={{ color: '#f3efe560' }}>
+      <div className="text-xs mb-6" style={{ color: '#0d2e2360' }}>
         <p className="mb-1">Qué hace: lee el texto visible de esa página y le pide a una IA que identifique prospectos.</p>
         <p className="mb-1">Qué NO hace: no guarda tu contraseña, no inicia sesión por ti, no navega otras páginas por su cuenta.</p>
         <p>Captura lo que se ve en esa vista — si los resultados están paginados, repite el clic en cada página.</p>
       </div>
 
       <RegenerarBoton />
+
+      <div className="mt-10 pt-8" style={{ borderTop: '1px solid #0d2e2315' }}>
+        <h2 className="text-lg font-semibold mb-1" style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}>
+          Hallazgos por revisar
+        </h2>
+        <p className="text-sm mb-4" style={{ color: '#0d2e2380' }}>
+          Lo que traiga el bookmarklet aparece aquí primero. Aprobar lo pasa a tu pipeline en
+          Contactos; Descartar lo saca de la lista.
+        </p>
+        {(hallazgos ?? []).length === 0 ? (
+          <p className="text-sm" style={{ color: '#0d2e2380' }}>
+            No hay hallazgos sin revisar por ahora.
+          </p>
+        ) : (
+          <HallazgosList hallazgos={(hallazgos as Hallazgo[] | null) ?? []} />
+        )}
+      </div>
     </div>
   )
 }

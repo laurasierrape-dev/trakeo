@@ -12,15 +12,15 @@ export default async function ProspectosPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold mb-1" style={{ color: '#f3efe5' }}>
+      <h1 className="text-xl font-semibold mb-1" style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}>
         Prospectos por revisar
       </h1>
-      <p className="text-sm mb-6" style={{ color: '#f3efe580' }}>
+      <p className="text-sm mb-6" style={{ color: '#0d2e2380' }}>
         Aprobar crea un contacto en tu pipeline. Descartar lo saca del pool.
       </p>
 
       {(prospectos ?? []).length === 0 ? (
-        <p className="text-sm" style={{ color: '#f3efe580' }}>
+        <p className="text-sm" style={{ color: '#0d2e2380' }}>
           No hay prospectos sin revisar por ahora.
         </p>
       ) : (

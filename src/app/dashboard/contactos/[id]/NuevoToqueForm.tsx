@@ -29,6 +29,7 @@ export function NuevoToqueForm({ contactoId }: { contactoId: string }) {
   const selectStyle = {
     backgroundColor: 'white',
     color: '#0d2e23',
+    border: '1px solid #0d2e2315',
   }
 
   return (

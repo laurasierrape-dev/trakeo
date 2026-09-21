@@ -4,6 +4,7 @@ import type { Contacto, Toque } from '@/lib/types'
 import { TemperaturaSelector } from './TemperaturaSelector'
 import { ProximoToqueForm } from './ProximoToqueForm'
 import { NuevoToqueForm } from './NuevoToqueForm'
+import { EliminarContactoBoton } from './EliminarContactoBoton'
 
 export default async function ContactoDetailPage({
   params,
@@ -31,10 +32,10 @@ export default async function ContactoDetailPage({
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold" style={{ color: '#f3efe5' }}>
+      <h1 className="text-xl font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}>
         {c.nombre_empresa}
       </h1>
-      <div className="text-sm mt-1 flex flex-col gap-0.5" style={{ color: '#f3efe580' }}>
+      <div className="text-sm mt-1 flex flex-col gap-0.5" style={{ color: '#0d2e2380' }}>
         {c.representante && <span>{c.representante}</span>}
         {c.telefono && <span>{c.telefono}</span>}
         {c.email && <span>{c.email}</span>}
@@ -46,18 +47,18 @@ export default async function ContactoDetailPage({
       </div>
 
       <div className="mt-8">
-        <h2 className="text-sm font-medium mb-3" style={{ color: '#f3efe5a0' }}>
+        <h2 className="text-sm font-medium mb-3" style={{ color: '#0d2e23a0' }}>
           Registrar toque
         </h2>
         <NuevoToqueForm contactoId={c.id} />
       </div>
 
       <div className="mt-8">
-        <h2 className="text-sm font-medium mb-3" style={{ color: '#f3efe5a0' }}>
+        <h2 className="text-sm font-medium mb-3" style={{ color: '#0d2e23a0' }}>
           Historial
         </h2>
         {(toques ?? []).length === 0 && (
-          <p className="text-sm" style={{ color: '#f3efe560' }}>
+          <p className="text-sm" style={{ color: '#0d2e2360' }}>
             Sin toques registrados todavía.
           </p>
         )}
@@ -66,24 +67,28 @@ export default async function ContactoDetailPage({
             <div
               key={t.id}
               className="rounded-xl p-3 text-sm"
-              style={{ backgroundColor: '#ffffff0d', border: '1px solid #f3efe520', color: '#f3efe5' }}
+              style={{ backgroundColor: 'white', border: '1px solid #0d2e2310', color: '#0d2e23' }}
             >
               <div className="flex justify-between">
                 <span className="font-medium">
                   {t.canal} — {t.resultado}
                 </span>
-                <span style={{ color: '#f3efe560' }}>
+                <span style={{ color: '#0d2e2360' }}>
                   {new Date(t.fecha).toLocaleDateString('es-CO')}
                 </span>
               </div>
               {t.notas && (
-                <p className="mt-1" style={{ color: '#f3efe580' }}>
+                <p className="mt-1" style={{ color: '#0d2e2380' }}>
                   {t.notas}
                 </p>
               )}
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="mt-10 pt-6" style={{ borderTop: '1px solid #0d2e2315' }}>
+        <EliminarContactoBoton contactoId={c.id} />
       </div>
     </div>
   )

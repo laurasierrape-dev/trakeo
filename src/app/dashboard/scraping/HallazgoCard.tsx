@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { aprobarProspecto, descartarProspecto } from '../actions'
-import type { Prospecto } from '@/lib/types'
+import { aprobarHallazgo, descartarHallazgo } from '../actions'
+import type { Hallazgo } from '@/lib/types'
 
-export function ProspectoCard({ prospecto }: { prospecto: Prospecto }) {
+export function HallazgoCard({ hallazgo }: { hallazgo: Hallazgo }) {
   const [hidden, setHidden] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -16,25 +16,20 @@ export function ProspectoCard({ prospecto }: { prospecto: Prospecto }) {
       style={{ backgroundColor: 'white', border: '1px solid #0d2e2310' }}
     >
       <p className="text-sm font-medium" style={{ color: '#0d2e23' }}>
-        {prospecto.razon_social}
+        {hallazgo.nombre_empresa}
       </p>
       <div className="text-xs mt-1 flex flex-col gap-0.5" style={{ color: '#0d2e2370' }}>
-        {prospecto.representante && <span>Representante: {prospecto.representante}</span>}
-        {prospecto.telefono && <span>Tel: {prospecto.telefono}</span>}
-        {prospecto.sector && (
-          <span>
-            Sector: {prospecto.sector}
-            {prospecto.zona ? ` — ${prospecto.zona}` : ''}
-          </span>
-        )}
-        {prospecto.facturacion_est && <span>Ingresos est.: {prospecto.facturacion_est}</span>}
+        {hallazgo.representante && <span>Representante: {hallazgo.representante}</span>}
+        {hallazgo.telefono && <span>Tel: {hallazgo.telefono}</span>}
+        {hallazgo.email && <span>Email: {hallazgo.email}</span>}
+        {hallazgo.notas && <span>{hallazgo.notas}</span>}
       </div>
       <div className="flex gap-2 mt-3">
         <button
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
-              await aprobarProspecto(prospecto)
+              await aprobarHallazgo(hallazgo)
               setHidden(true)
             })
           }
@@ -47,7 +42,7 @@ export function ProspectoCard({ prospecto }: { prospecto: Prospecto }) {
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
-              await descartarProspecto(prospecto.id)
+              await descartarHallazgo(hallazgo.id)
               setHidden(true)
             })
           }

@@ -14,7 +14,7 @@ export function ProximoToqueForm({
 
   return (
     <div>
-      <p className="text-xs mb-1.5" style={{ color: '#f3efe560' }}>
+      <p className="text-xs mb-1.5" style={{ color: '#0d2e2360' }}>
         Próximo toque
       </p>
       <input
@@ -25,7 +25,7 @@ export function ProximoToqueForm({
           startTransition(() => actualizarProximoToque(contactoId, e.target.value || null))
         }
         className="rounded-lg px-3 py-1.5 text-xs focus:outline-none"
-        style={{ backgroundColor: 'white', color: '#0d2e23' }}
+        style={{ backgroundColor: 'white', color: '#0d2e23', border: '1px solid #0d2e2315' }}
       />
     </div>
   )

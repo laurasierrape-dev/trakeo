@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
+import { SidebarNav } from './SidebarNav'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -11,41 +11,33 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect('/login')
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0d2e23' }}>
-      <nav
-        className="flex items-center justify-between px-6 py-4"
-        style={{ borderBottom: '1px solid #f3efe520' }}
+    <div className="min-h-screen flex" style={{ backgroundColor: '#f3efe5' }}>
+      <aside
+        className="w-60 shrink-0 flex flex-col px-4 py-6"
+        style={{ borderRight: '1px solid #0d2e2315' }}
       >
-        <div className="flex items-center gap-6">
-          <span className="font-semibold" style={{ color: '#f3efe5' }}>
-            Trakeo
-          </span>
-          <Link href="/dashboard" className="text-sm" style={{ color: '#f3efe5a0' }}>
-            Contactos
-          </Link>
-          <Link href="/dashboard/prospectos" className="text-sm" style={{ color: '#f3efe5a0' }}>
-            Prospectos
-          </Link>
-          <Link href="/dashboard/scraping" className="text-sm" style={{ color: '#f3efe5a0' }}>
-            Scraping
-          </Link>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-xs" style={{ color: '#f3efe560' }}>
+        <span className="font-semibold px-3 mb-6" style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}>
+          Trakeo
+        </span>
+
+        <SidebarNav />
+
+        <div className="mt-auto pt-6 flex flex-col gap-2 px-3" style={{ borderTop: '1px solid #0d2e2315' }}>
+          <span className="text-xs truncate" style={{ color: '#0d2e2360' }}>
             {user.email}
           </span>
           <form action="/auth/signout" method="post">
             <button
               type="submit"
               className="text-xs cursor-pointer"
-              style={{ color: '#f3efe5a0' }}
+              style={{ color: '#0d2e23a0' }}
             >
               Salir
             </button>
           </form>
         </div>
-      </nav>
-      <main className="px-6 py-8">{children}</main>
+      </aside>
+      <main className="flex-1 px-6 py-8 min-w-0">{children}</main>
     </div>
   )
 }
