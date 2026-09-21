@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const MAX_CONTENT_CHARS = 200_000
+// La cuenta de Groq usada aquí tiene un límite de 8,000 tokens/minuto para
+// este modelo. 15,000 caracteres de contenido (~4,000-5,000 tokens con texto
+// en español) deja margen suficiente para el prompt y el schema del tool
+// sin pasarse — confirmado en vivo: 12,020 tokens solicitados ya excedía el
+// límite. Si la cuenta sube de tier, este número se puede subir.
+const MAX_CONTENT_CHARS = 15_000
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

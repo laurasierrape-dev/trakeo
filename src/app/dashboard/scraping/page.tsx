@@ -7,12 +7,18 @@ import { createClient } from '@/lib/supabase/server'
 import type { Hallazgo } from '@/lib/types'
 
 const MAX_PAGINAS_BOOKMARKLET = 10
+// Debe coincidir con MAX_CONTENT_CHARS en /api/bookmarklet/route.ts — el
+// límite real está en cuántos tokens acepta la cuenta de Groq por minuto,
+// no en lo que el bookmarklet pueda juntar. Sin esto, seguiría clickeando
+// páginas que el servidor igual va a descartar.
+const MAX_CHARS_BOOKMARKLET = 15_000
 
 function construirBookmarklet(origin: string, token: string): string {
   const codigo = `(async function(){
     var pregunta = prompt("¿Qué buscas en esta página? (opcional)") || "";
-    var MAX_PAGINAS = ${MAX_PAGINAS_BOOKMARKLET};
-    var MAX_CHARS = 200000;
+    var paginasTexto = prompt("¿Cuántas páginas quieres recorrer como máximo? (1-${MAX_PAGINAS_BOOKMARKLET}, deja vacío para ${MAX_PAGINAS_BOOKMARKLET})") || "";
+    var MAX_PAGINAS = Math.min(Math.max(parseInt(paginasTexto, 10) || ${MAX_PAGINAS_BOOKMARKLET}, 1), ${MAX_PAGINAS_BOOKMARKLET});
+    var MAX_CHARS = ${MAX_CHARS_BOOKMARKLET};
     var textos = [document.body.innerText];
     var paginas = 1;
 
@@ -113,7 +119,7 @@ export default async function ScrapingPage() {
       <div className="text-xs mb-6" style={{ color: '#0d2e2360' }}>
         <p className="mb-1">Qué hace: lee el texto visible de esa página y le pide a una IA que identifique prospectos.</p>
         <p className="mb-1">Qué NO hace: no guarda tu contraseña, no inicia sesión por ti, no navega otras páginas por su cuenta.</p>
-        <p>Si detecta un botón de &quot;Siguiente&quot; en la página, avanza automáticamente hasta 10 páginas de resultados antes de mandarlo todo — si hay más, repite el clic desde donde se quedó.</p>
+        <p>Te va a preguntar dos cosas: qué buscas (para que la IA filtre) y cuántas páginas recorrer (tú decides, hasta {MAX_PAGINAS_BOOKMARKLET}). Puede parar antes si el contenido llena el cupo por envío (normalmente 2-4 páginas) — si hay más, repite el clic desde donde se quedó.</p>
       </div>
 
       <RegenerarBoton />

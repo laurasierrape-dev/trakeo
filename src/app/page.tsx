@@ -11,13 +11,22 @@ export default function Home() {
         <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem', color: '#0d2e23' }}>
           Trakeo
         </span>
-        <a
-          href="#formulario"
-          className="text-sm font-semibold px-5 py-2.5 rounded-full transition-all"
-          style={{ backgroundColor: '#0d2e23', color: '#f3efe5' }}
-        >
-          Acceso anticipado
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href="/login"
+            className="text-sm font-medium"
+            style={{ color: '#0d2e2380' }}
+          >
+            Iniciar sesión
+          </a>
+          <a
+            href="#formulario"
+            className="text-sm font-semibold px-5 py-2.5 rounded-full transition-all"
+            style={{ backgroundColor: '#0d2e23', color: '#f3efe5' }}
+          >
+            Acceso anticipado
+          </a>
+        </div>
       </nav>
 
       {/* Hero */}
