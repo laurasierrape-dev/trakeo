@@ -40,6 +40,11 @@ export default async function ContactoDetailPage({
         {c.telefono && <span>{c.telefono}</span>}
         {c.email && <span>{c.email}</span>}
       </div>
+      {c.descripcion && (
+        <p className="text-sm mt-3 max-w-lg" style={{ color: '#0d2e2370' }}>
+          {c.descripcion}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-6 mt-6">
         <TemperaturaSelector contactoId={c.id} temperatura={c.temperatura} />

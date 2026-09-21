@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const MAX_CONTENT_CHARS = 60_000
+const MAX_CONTENT_CHARS = 200_000
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +23,7 @@ type ProspectoExtraido = {
   email?: string | null
   representante?: string | null
   facturacion?: string | null
+  descripcion?: string | null
 }
 
 async function extraerProspectos(contenido: string, pregunta: string): Promise<ProspectoExtraido[]> {
@@ -44,12 +45,14 @@ async function extraerProspectos(contenido: string, pregunta: string): Promise<P
         {
           role: 'user',
           content:
-            'Extrae de este texto (copiado de una página web) una lista de empresas o personas ' +
-            'candidatas a prospecto de negocio, con todo lo que encuentres de cada una: nombre, ' +
-            'teléfono, email, representante legal / contacto principal, y cualquier cifra de ' +
-            'facturación, ingresos o ventas anuales que aparezca (cópiala tal cual aparece, con ' +
-            'su moneda/unidad). Deja cada campo vacío si no aparece — no inventes datos. ' +
-            'Si no hay ningún candidato claro, devuelve una lista vacía.' +
+            'Extrae de este texto (copiado de una página web, posiblemente de varias páginas de ' +
+            'resultados concatenadas) una lista de empresas o personas candidatas a prospecto de ' +
+            'negocio, con todo lo que encuentres de cada una: nombre, teléfono, email, ' +
+            'representante legal / contacto principal, cualquier cifra de facturación, ingresos o ' +
+            'ventas anuales que aparezca (cópiala tal cual aparece, con su moneda/unidad), y una ' +
+            'breve descripción de a qué se dedica la empresa si aparece en el texto. Deja cada ' +
+            'campo vacío si no aparece — no inventes datos. No repitas la misma empresa dos veces ' +
+            'si aparece en más de una página. Si no hay ningún candidato claro, devuelve una lista vacía.' +
             instruccionPregunta +
             '\n\n' +
             contenido,
@@ -76,6 +79,10 @@ async function extraerProspectos(contenido: string, pregunta: string): Promise<P
                       facturacion: {
                         type: ['string', 'null'],
                         description: 'Cifra de facturación/ingresos/ventas anuales tal como aparece en el texto',
+                      },
+                      descripcion: {
+                        type: ['string', 'null'],
+                        description: 'Breve descripción de a qué se dedica la empresa, si aparece en el texto',
                       },
                     },
                     required: ['nombre'],
@@ -156,6 +163,7 @@ export async function POST(req: NextRequest) {
           telefono: p.telefono ?? null,
           email: p.email ?? null,
           representante: p.representante ?? null,
+          descripcion: p.descripcion ?? null,
           notas,
           consultor_id: tokenRow.consultor_id,
         }

@@ -6,16 +6,61 @@ import { HallazgosList } from './HallazgosList'
 import { createClient } from '@/lib/supabase/server'
 import type { Hallazgo } from '@/lib/types'
 
+const MAX_PAGINAS_BOOKMARKLET = 10
+
 function construirBookmarklet(origin: string, token: string): string {
-  const codigo = `(function(){
+  const codigo = `(async function(){
     var pregunta = prompt("¿Qué buscas en esta página? (opcional)") || "";
-    var contenido = document.body.innerText.slice(0, 60000);
+    var MAX_PAGINAS = ${MAX_PAGINAS_BOOKMARKLET};
+    var MAX_CHARS = 200000;
+    var textos = [document.body.innerText];
+    var paginas = 1;
+
+    function deshabilitado(el) {
+      if (el.disabled || el.getAttribute('aria-disabled') === 'true') return true;
+      if (el.offsetParent === null) return true;
+      return !!el.closest('.disabled, [disabled], [aria-disabled="true"]');
+    }
+
+    function buscarSiguiente() {
+      var candidatos = document.querySelectorAll('a, button');
+      for (var i = 0; i < candidatos.length; i++) {
+        var el = candidatos[i];
+        if (deshabilitado(el)) continue;
+        var txt = (el.textContent || '').trim().toLowerCase();
+        var aria = (el.getAttribute('aria-label') || '').toLowerCase();
+        if (txt === 'siguiente' || txt === 'next' || txt === '>' || txt === '\\u203a' ||
+            aria.indexOf('next') !== -1 || aria.indexOf('siguiente') !== -1) {
+          return el;
+        }
+      }
+      var iconos = document.querySelectorAll(
+        '[class*="chevron-right"], [class*="angle-right"], [class*="arrow-right"], [class*="caret-right"]'
+      );
+      for (var j = 0; j < iconos.length; j++) {
+        var clicable = iconos[j].closest('a, button, li, [role="button"]');
+        if (clicable && !deshabilitado(clicable)) return clicable;
+      }
+      return null;
+    }
+
+    while (paginas < MAX_PAGINAS && textos.join('').length < MAX_CHARS) {
+      var siguiente = buscarSiguiente();
+      if (!siguiente) break;
+      siguiente.click();
+      await new Promise(function(r) { setTimeout(r, 1500); });
+      textos.push(document.body.innerText);
+      paginas++;
+    }
+
+    var contenido = textos.join('\\n\\n---PAGINA---\\n\\n').slice(0, MAX_CHARS);
+
     fetch(${JSON.stringify(origin)} + "/api/bookmarklet", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({ token: ${JSON.stringify(token)}, url: location.href, contenido: contenido, pregunta: pregunta })
     }).then(function(r){ return r.json(); }).then(function(data){
-      if (data.ok) { alert("Trakeo: " + data.creados + " hallazgo(s) para revisar en tu dashboard."); }
+      if (data.ok) { alert("Trakeo: " + data.creados + " hallazgo(s) para revisar en tu dashboard (recorrió " + paginas + " página(s))."); }
       else { alert("Trakeo: " + (data.error || "error desconocido")); }
     }).catch(function(){ alert("Trakeo: no se pudo conectar."); });
   })()`.replace(/\s+/g, ' ')
@@ -68,7 +113,7 @@ export default async function ScrapingPage() {
       <div className="text-xs mb-6" style={{ color: '#0d2e2360' }}>
         <p className="mb-1">Qué hace: lee el texto visible de esa página y le pide a una IA que identifique prospectos.</p>
         <p className="mb-1">Qué NO hace: no guarda tu contraseña, no inicia sesión por ti, no navega otras páginas por su cuenta.</p>
-        <p>Captura lo que se ve en esa vista — si los resultados están paginados, repite el clic en cada página.</p>
+        <p>Si detecta un botón de &quot;Siguiente&quot; en la página, avanza automáticamente hasta 10 páginas de resultados antes de mandarlo todo — si hay más, repite el clic desde donde se quedó.</p>
       </div>
 
       <RegenerarBoton />

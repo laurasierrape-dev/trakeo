@@ -95,6 +95,11 @@ SCHEMA = json.dumps(
             "nit": {"type": ["string", "null"]},
             "representante": {"type": ["string", "null"]},
             "sector": {"type": ["string", "null"]},
+            "descripcion": {
+                "type": ["string", "null"],
+                "description": "Texto de objeto social / actividad de la empresa, si aparece "
+                "en el detalle y es distinto del código CIIU",
+            },
         },
         "required": ["encontrado"],
     }
@@ -106,9 +111,10 @@ buscar la empresa "{nombre}". Si hay resultados, abre el primero (link \
 "Ver información"). En el detalle, revisa las pestañas "Información \
 general" (para el NIT bajo "Identificación"), "Actividad económica" \
 (código y descripción) y "Representante legal" (nombre de la persona). \
-Devuelve razon_social, nit, representante y sector. Si la empresa no tiene \
-NIT público (ej. es una "Agencia") o no hay resultados, marca \
-encontrado=false."""
+Devuelve razon_social, nit, representante, sector y, si aparece un texto \
+de objeto social o descripción de la actividad más allá del código CIIU, \
+también descripcion. Si la empresa no tiene NIT público (ej. es una \
+"Agencia") o no hay resultados, marca encontrado=false."""
 
 
 def run_agent(nombre: str, max_credits: int) -> dict:
@@ -187,6 +193,7 @@ def main():
                 "sector": datos.get("sector"),
                 "zona": None,
                 "facturacion_est": facturacion_est,
+                "descripcion": datos.get("descripcion"),
                 "fuente": "rues",
                 "estado": "sin_revisar",
             },

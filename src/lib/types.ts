@@ -8,6 +8,7 @@ export type Prospecto = {
   zona: string | null
   facturacion_est: string | null
   fuente: string | null
+  descripcion: string | null
   estado: 'sin_revisar' | 'aprobado' | 'descartado'
   created_at: string
 }
@@ -20,6 +21,7 @@ export type Contacto = {
   representante: string | null
   telefono: string | null
   email: string | null
+  descripcion: string | null
   temperatura: 'frio' | 'interesado' | 'vinculado'
   proximo_toque: string | null
   notas: string | null
@@ -35,6 +37,7 @@ export type Hallazgo = {
   representante: string | null
   telefono: string | null
   email: string | null
+  descripcion: string | null
   notas: string | null
   estado: 'sin_revisar' | 'aprobado' | 'descartado'
   created_at: string

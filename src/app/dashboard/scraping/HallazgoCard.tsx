@@ -22,6 +22,7 @@ export function HallazgoCard({ hallazgo }: { hallazgo: Hallazgo }) {
         {hallazgo.representante && <span>Representante: {hallazgo.representante}</span>}
         {hallazgo.telefono && <span>Tel: {hallazgo.telefono}</span>}
         {hallazgo.email && <span>Email: {hallazgo.email}</span>}
+        {hallazgo.descripcion && <span>{hallazgo.descripcion}</span>}
         {hallazgo.notas && <span>{hallazgo.notas}</span>}
       </div>
       <div className="flex gap-2 mt-3">

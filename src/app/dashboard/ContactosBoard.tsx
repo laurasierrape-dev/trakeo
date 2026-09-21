@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChatFiltro } from '@/components/ChatFiltro'
 import { ContactoRowMenu } from './ContactoRowMenu'
+import { exportarCSV } from '@/lib/csv'
 import type { Contacto } from '@/lib/types'
 
 const PILL_ESTILO: Record<Contacto['temperatura'], { backgroundColor: string; color: string }> = {
@@ -57,14 +58,37 @@ export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
 
       <ChatFiltro items={contactos} onResultado={ids => setIdsIA(ids ? new Set(ids) : null)} />
 
-      <input
-        type="text"
-        placeholder="Buscar por nombre..."
-        value={busqueda}
-        onChange={e => setBusqueda(e.target.value)}
-        className="rounded-lg px-3 py-2 text-xs focus:outline-none mb-4 w-full max-w-xs"
-        style={{ backgroundColor: 'white', color: '#0d2e23', border: '1px solid #0d2e2315' }}
-      />
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Buscar por nombre..."
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          className="rounded-lg px-3 py-2 text-xs focus:outline-none w-full max-w-xs"
+          style={{ backgroundColor: 'white', color: '#0d2e23', border: '1px solid #0d2e2315' }}
+        />
+        <button
+          onClick={() =>
+            exportarCSV(
+              filtrados,
+              [
+                { key: 'nombre_empresa', label: 'Empresa' },
+                { key: 'representante', label: 'Representante' },
+                { key: 'telefono', label: 'Teléfono' },
+                { key: 'temperatura', label: 'Temperatura' },
+                { key: 'proximo_toque', label: 'Próximo toque' },
+                { key: 'descripcion', label: 'Descripción' },
+                { key: 'notas', label: 'Notas' },
+              ],
+              'contactos.csv'
+            )
+          }
+          className="text-xs rounded-lg px-3 py-2 cursor-pointer whitespace-nowrap"
+          style={{ border: '1px solid #0d2e2320', color: '#0d2e2380' }}
+        >
+          Exportar CSV
+        </button>
+      </div>
 
       <div
         className="rounded-2xl overflow-hidden"

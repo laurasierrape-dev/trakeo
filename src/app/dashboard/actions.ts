@@ -17,6 +17,7 @@ export async function aprobarProspecto(prospecto: Prospecto) {
       nombre_empresa: prospecto.razon_social,
       representante: prospecto.representante,
       telefono: prospecto.telefono,
+      descripcion: prospecto.descripcion,
       consultor_id: user.id,
     },
   ])
@@ -91,6 +92,7 @@ export async function aprobarHallazgo(hallazgo: Hallazgo) {
       representante: hallazgo.representante,
       telefono: hallazgo.telefono,
       email: hallazgo.email,
+      descripcion: hallazgo.descripcion,
       notas: hallazgo.notas,
       consultor_id: user.id,
     },

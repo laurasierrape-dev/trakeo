@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { ProspectoCard } from './ProspectoCard'
 import { ChatFiltro } from '@/components/ChatFiltro'
+import { exportarCSV } from '@/lib/csv'
 import type { Prospecto } from '@/lib/types'
 
 const selectStyle = {
@@ -80,6 +81,28 @@ export function ProspectosList({ prospectos }: { prospectos: Prospecto[] }) {
             ))}
           </select>
         )}
+        <button
+          onClick={() =>
+            exportarCSV(
+              filtrados,
+              [
+                { key: 'razon_social', label: 'Razón social' },
+                { key: 'nit', label: 'NIT' },
+                { key: 'representante', label: 'Representante' },
+                { key: 'telefono', label: 'Teléfono' },
+                { key: 'sector', label: 'Sector' },
+                { key: 'zona', label: 'Zona' },
+                { key: 'facturacion_est', label: 'Facturación estimada' },
+                { key: 'descripcion', label: 'Descripción' },
+              ],
+              'prospectos.csv'
+            )
+          }
+          className="text-xs rounded-lg px-3 py-2 cursor-pointer whitespace-nowrap"
+          style={{ border: '1px solid #0d2e2320', color: '#0d2e2380' }}
+        >
+          Exportar CSV
+        </button>
       </div>
 
       {filtrados.length === 0 && (

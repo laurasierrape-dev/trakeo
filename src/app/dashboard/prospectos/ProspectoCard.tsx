@@ -28,6 +28,7 @@ export function ProspectoCard({ prospecto }: { prospecto: Prospecto }) {
           </span>
         )}
         {prospecto.facturacion_est && <span>Ingresos est.: {prospecto.facturacion_est}</span>}
+        {prospecto.descripcion && <span>{prospecto.descripcion}</span>}
       </div>
       <div className="flex gap-2 mt-3">
         <button

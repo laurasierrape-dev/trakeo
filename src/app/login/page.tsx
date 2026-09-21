@@ -25,13 +25,16 @@ export default function LoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ backgroundColor: '#0d2e23' }}
+      style={{ backgroundColor: '#f3efe5' }}
     >
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold mb-1" style={{ color: '#f3efe5' }}>
+        <h1
+          className="text-2xl font-semibold mb-1"
+          style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}
+        >
           Trakeo
         </h1>
-        <p className="text-sm mb-6" style={{ color: '#f3efe580' }}>
+        <p className="text-sm mb-6" style={{ color: '#0d2e2380' }}>
           Ingresa con tu email para acceder a tu pipeline.
         </p>
 
@@ -53,7 +56,7 @@ export default function LoginPage() {
               style={{ backgroundColor: 'white', border: '1.5px solid #0d2e2320', color: '#0d2e23' }}
             />
             {status === 'error' && (
-              <p className="text-xs" style={{ color: '#f87171' }}>
+              <p className="text-xs" style={{ color: '#b91c1c' }}>
                 Algo salió mal. Intenta de nuevo.
               </p>
             )}
