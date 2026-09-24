@@ -28,6 +28,11 @@ function construirBookmarklet(origin: string, token: string): string {
     var paginas = 0;
     var creadosTotal = 0;
     var fallidas = 0;
+    var ultimoError = "";
+    var cspViolations = [];
+    document.addEventListener("securitypolicyviolation", function(e) {
+      cspViolations.push((e.violatedDirective || "?") + " bloqueó " + (e.blockedURI || "?"));
+    });
 
     function deshabilitado(el) {
       if (el.disabled || el.getAttribute('aria-disabled') === 'true') return true;
@@ -65,8 +70,8 @@ function construirBookmarklet(origin: string, token: string): string {
           body: JSON.stringify({ token: ${JSON.stringify(token)}, url: location.href, contenido: texto.slice(0, MAX_CHARS), pregunta: pregunta })
         });
         var data = await r.json();
-        if (data.ok) { creadosTotal += data.creados; } else { fallidas++; }
-      } catch (e) { fallidas++; }
+        if (data.ok) { creadosTotal += data.creados; } else { fallidas++; ultimoError = data.error || "error desconocido del servidor"; }
+      } catch (e) { fallidas++; ultimoError = (e && e.message) || String(e); }
     }
 
     while (paginas < MAX_PAGINAS) {
@@ -80,7 +85,15 @@ function construirBookmarklet(origin: string, token: string): string {
       await new Promise(function(r) { setTimeout(r, ${PAUSA_ENTRE_PAGINAS_MS}); });
     }
 
-    alert("Trakeo: " + creadosTotal + " hallazgo(s) nuevo(s) para revisar en tu dashboard (recorrió " + paginas + " página(s))" + (fallidas > 0 ? ", " + fallidas + " página(s) fallaron" : "") + ".");
+    var motivo = "";
+    if (fallidas > 0) {
+      if (cspViolations.length > 0) {
+        motivo = " Motivo: este sitio bloquea la conexión a Trakeo por su propia política de seguridad (CSP: " + cspViolations[0] + ") — no se puede evitar desde Trakeo en este sitio.";
+      } else if (ultimoError) {
+        motivo = " Último error: " + ultimoError;
+      }
+    }
+    alert("Trakeo: " + creadosTotal + " hallazgo(s) nuevo(s) para revisar en tu dashboard (recorrió " + paginas + " página(s))" + (fallidas > 0 ? ", " + fallidas + " página(s) fallaron." + motivo : ".") );
   })()`.replace(/\s+/g, ' ')
 
   return `javascript:${encodeURIComponent(codigo)}`
