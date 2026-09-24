@@ -9,8 +9,11 @@ import type { Hallazgo } from '@/lib/types'
 const MAX_PAGINAS_BOOKMARKLET = 10
 // Tope de seguridad por página individual — no es el límite del recorrido
 // completo (ver PAUSA_ENTRE_PAGINAS_MS más abajo). Debe coincidir con
-// MAX_CONTENT_CHARS en /api/bookmarklet/route.ts.
-const MAX_CHARS_BOOKMARKLET = 15_000
+// MAX_CONTENT_CHARS en /api/bookmarklet/route.ts. Bajado de 15,000: en
+// contenido denso (tablas con muchos códigos/columnas, ej. Orbis) 15,000
+// caracteres ya generaba más tokens de los que la cuenta de Groq permite
+// por minuto (413 real en vivo), aunque para prosa (RUES) sí alcanzaba.
+const MAX_CHARS_BOOKMARKLET = 7_000
 // El límite de la cuenta de Groq es 8,000 tokens/minuto ACUMULADOS — mandar
 // varios POSTs seguidos sigue sumando aunque cada uno sea chico. Por eso el
 // bookmarklet manda un POST por página en vez de juntar todo al final, y

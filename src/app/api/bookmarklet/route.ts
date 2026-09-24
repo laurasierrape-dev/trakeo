@@ -2,14 +2,16 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 // La cuenta de Groq usada aquí tiene un límite de 8,000 tokens/minuto para
-// este modelo. 15,000 caracteres de contenido (~4,000-5,000 tokens con texto
-// en español) deja margen suficiente para el prompt y el schema del tool
-// sin pasarse — confirmado en vivo: 12,020 tokens solicitados ya excedía el
-// límite. El bookmarklet manda un POST por página (no todo el recorrido en
+// este modelo. El tope de caracteres necesario para quedar bajo eso depende
+// de qué tan denso es el texto: prosa en español (RUES) tokeniza distinto a
+// una tabla de datos densa en códigos/columnas (Orbis) — un 413 real en vivo
+// con contenido de Orbis mostró que 15,000 caracteres ya no alcanza para
+// tablas así, aunque para RUES sí funcionaba. 7,000 deja margen para ambos
+// casos. El bookmarklet manda un POST por página (no todo el recorrido en
 // uno solo), así que este tope es solo una salvaguarda por página individual,
 // no el límite del recorrido completo. Si la cuenta sube de tier, este
 // número se puede subir.
-const MAX_CONTENT_CHARS = 15_000
+const MAX_CONTENT_CHARS = 7_000
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
