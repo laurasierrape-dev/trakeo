@@ -4,6 +4,29 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { Hallazgo, Prospecto } from '@/lib/types'
 
+// HU-04: al abrir el detalle de un prospecto o hallazgo, busca coincidencias
+// por nombre exacto (sin distinguir mayúsculas) en la otra tabla — el
+// "resumen" que junta lo encontrado por scraping con lo que ya existe en
+// las bases importadas del consultor.
+export async function buscarCoincidencias(
+  nombreEmpresa: string,
+  excluir: { prospectoId?: string; hallazgoId?: string }
+) {
+  const supabase = await createClient()
+  const nombre = nombreEmpresa.trim()
+  if (!nombre) return { prospectos: [] as Prospecto[], hallazgos: [] as Hallazgo[] }
+
+  const [{ data: prospectos }, { data: hallazgos }] = await Promise.all([
+    supabase.from('prospectos').select('*').ilike('razon_social', nombre),
+    supabase.from('hallazgos').select('*').ilike('nombre_empresa', nombre),
+  ])
+
+  return {
+    prospectos: ((prospectos as Prospecto[] | null) ?? []).filter(p => p.id !== excluir.prospectoId),
+    hallazgos: ((hallazgos as Hallazgo[] | null) ?? []).filter(h => h.id !== excluir.hallazgoId),
+  }
+}
+
 export async function crearProyecto(nombre: string, criterios: string) {
   const supabase = await createClient()
   const {

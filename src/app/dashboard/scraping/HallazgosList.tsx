@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { HallazgoCard } from './HallazgoCard'
 import { ChatFiltro } from '@/components/ChatFiltro'
+import { Modal } from '@/components/Modal'
 import { exportarCSV } from '@/lib/csv'
 import { aprobarHallazgosMasivo, descartarHallazgosMasivo } from '../actions'
 import type { Hallazgo, Proyecto } from '@/lib/types'
@@ -23,6 +24,7 @@ export function HallazgosList({
   const [idsIA, setIdsIA] = useState<Set<string> | null>(null)
   const [proyectoDestino, setProyectoDestino] = useState('')
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [detalle, setDetalle] = useState<Hallazgo | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const filtrados = idsIA ? hallazgos.filter(h => idsIA.has(h.id)) : hallazgos
@@ -144,17 +146,78 @@ export function HallazgosList({
         </div>
       )}
 
-      <div className="grid gap-3 md:grid-cols-2">
-        {filtrados.map(h => (
+      {filtrados.length > 0 && (
+        <div
+          className="rounded-2xl overflow-hidden overflow-x-auto"
+          style={{ backgroundColor: 'white', border: '1px solid #0d2e2310' }}
+        >
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: '1px solid #0d2e2315' }}>
+                <th className="px-4 py-3 text-xs" style={{ color: '#0d2e2360' }} onClick={e => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={seleccionados.size > 0 && seleccionados.size === filtrados.length}
+                    onChange={toggleSeleccionarTodo}
+                    className="cursor-pointer"
+                  />
+                </th>
+                {['Empresa', 'Representante', 'Teléfono', 'Email'].map(h => (
+                  <th
+                    key={h}
+                    className="text-left font-medium px-4 py-3 text-xs whitespace-nowrap"
+                    style={{ color: '#0d2e2360' }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtrados.map(h => (
+                <tr
+                  key={h.id}
+                  onClick={() => setDetalle(h)}
+                  className="cursor-pointer transition-colors"
+                  style={{ borderBottom: '1px solid #0d2e2308' }}
+                >
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={seleccionados.has(h.id)}
+                      onChange={() => toggleSeleccionado(h.id)}
+                      className="cursor-pointer"
+                    />
+                  </td>
+                  <td className="px-4 py-3 font-medium" style={{ color: '#0d2e23' }}>
+                    {h.nombre_empresa}
+                  </td>
+                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                    {h.representante || '—'}
+                  </td>
+                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                    {h.telefono || '—'}
+                  </td>
+                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                    {h.email || '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Modal abierto={!!detalle} onCerrar={() => setDetalle(null)} titulo={detalle?.nombre_empresa}>
+        {detalle && (
           <HallazgoCard
-            key={h.id}
-            hallazgo={h}
+            hallazgo={detalle}
             proyectoId={proyectoDestino || null}
-            selected={seleccionados.has(h.id)}
-            onToggleSelected={() => toggleSeleccionado(h.id)}
+            modoDetalle
+            onAccion={() => setDetalle(null)}
           />
-        ))}
-      </div>
+        )}
+      </Modal>
     </div>
   )
 }

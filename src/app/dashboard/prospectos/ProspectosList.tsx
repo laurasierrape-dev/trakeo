@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import { ProspectoCard } from './ProspectoCard'
 import { ChatFiltro } from '@/components/ChatFiltro'
+import { Modal } from '@/components/Modal'
 import { exportarCSV } from '@/lib/csv'
 import { aprobarProspectosMasivo, descartarProspectosMasivo } from '../actions'
 import type { Prospecto, Proyecto } from '@/lib/types'
@@ -26,6 +27,7 @@ export function ProspectosList({
   const [proyectoDestino, setProyectoDestino] = useState('')
   const [idsIA, setIdsIA] = useState<Set<string> | null>(null)
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
+  const [detalle, setDetalle] = useState<Prospecto | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const sectores = useMemo(
@@ -202,17 +204,81 @@ export function ProspectosList({
         </div>
       )}
 
-      <div className="grid gap-3 md:grid-cols-2">
-        {filtrados.map(p => (
+      {filtrados.length > 0 && (
+        <div
+          className="rounded-2xl overflow-hidden overflow-x-auto"
+          style={{ backgroundColor: 'white', border: '1px solid #0d2e2310' }}
+        >
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: '1px solid #0d2e2315' }}>
+                <th className="px-4 py-3 text-xs" style={{ color: '#0d2e2360' }} onClick={e => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={seleccionados.size > 0 && seleccionados.size === filtrados.length}
+                    onChange={toggleSeleccionarTodo}
+                    className="cursor-pointer"
+                  />
+                </th>
+                {['Empresa', 'Representante', 'Teléfono', 'Sector', 'Ingresos est.'].map(h => (
+                  <th
+                    key={h}
+                    className="text-left font-medium px-4 py-3 text-xs whitespace-nowrap"
+                    style={{ color: '#0d2e2360' }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtrados.map(p => (
+                <tr
+                  key={p.id}
+                  onClick={() => setDetalle(p)}
+                  className="cursor-pointer transition-colors"
+                  style={{ borderBottom: '1px solid #0d2e2308' }}
+                >
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={seleccionados.has(p.id)}
+                      onChange={() => toggleSeleccionado(p.id)}
+                      className="cursor-pointer"
+                    />
+                  </td>
+                  <td className="px-4 py-3 font-medium" style={{ color: '#0d2e23' }}>
+                    {p.razon_social}
+                  </td>
+                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                    {p.representante || '—'}
+                  </td>
+                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                    {p.telefono || '—'}
+                  </td>
+                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                    {p.sector || '—'}
+                  </td>
+                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                    {p.ingresos_miles != null ? `${p.ingresos_miles.toLocaleString('es-CO')} mil` : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Modal abierto={!!detalle} onCerrar={() => setDetalle(null)} titulo={detalle?.razon_social}>
+        {detalle && (
           <ProspectoCard
-            key={p.id}
-            prospecto={p}
+            prospecto={detalle}
             proyectoId={proyectoDestino || null}
-            selected={seleccionados.has(p.id)}
-            onToggleSelected={() => toggleSeleccionado(p.id)}
+            modoDetalle
+            onAccion={() => setDetalle(null)}
           />
-        ))}
-      </div>
+        )}
+      </Modal>
     </div>
   )
 }
