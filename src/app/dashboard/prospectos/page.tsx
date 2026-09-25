@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Prospecto } from '@/lib/types'
 import { ProspectosList } from './ProspectosList'
+import { ImportarBase } from './ImportarBase'
 
 export default async function ProspectosPage() {
   const supabase = await createClient()
@@ -18,6 +19,8 @@ export default async function ProspectosPage() {
       <p className="text-sm mb-6" style={{ color: '#0d2e2380' }}>
         Aprobar crea un contacto en tu pipeline. Descartar lo saca del pool.
       </p>
+
+      <ImportarBase />
 
       {(prospectos ?? []).length === 0 ? (
         <p className="text-sm" style={{ color: '#0d2e2380' }}>

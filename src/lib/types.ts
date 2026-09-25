@@ -4,11 +4,16 @@ export type Prospecto = {
   nit: string | null
   representante: string | null
   telefono: string | null
+  email: string | null
   sector: string | null
   zona: string | null
-  facturacion_est: string | null
+  // Nota: la columna real en la base es "ingresos_miles" (numeric), no
+  // "facturacion_est" — el nombre original de la migración 0001 quedó
+  // desactualizado tras un cambio de esquema hecho fuera de las migraciones.
+  ingresos_miles: number | null
   fuente: string | null
   descripcion: string | null
+  datos_extra: Record<string, string> | null
   estado: 'sin_revisar' | 'aprobado' | 'descartado'
   created_at: string
 }

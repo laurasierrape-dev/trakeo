@@ -13,12 +13,16 @@
     "@supabase/supabase-js": "^2.108.2",
     "lucide-react": "^1.22.0",
     "next": "16.2.9",
+    "papaparse": "^5.7.0",
+    "pdf-parse": "^2.4.5",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-latest/xlsx-latest.tgz"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

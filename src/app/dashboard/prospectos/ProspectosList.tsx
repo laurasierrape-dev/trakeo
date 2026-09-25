@@ -112,7 +112,7 @@ export function ProspectosList({ prospectos }: { prospectos: Prospecto[] }) {
                 { key: 'telefono', label: 'Teléfono' },
                 { key: 'sector', label: 'Sector' },
                 { key: 'zona', label: 'Zona' },
-                { key: 'facturacion_est', label: 'Facturación estimada' },
+                { key: 'ingresos_miles', label: 'Ingresos estimados (miles)' },
                 { key: 'descripcion', label: 'Descripción' },
               ],
               'prospectos.csv'

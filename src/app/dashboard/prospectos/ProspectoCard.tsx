@@ -43,7 +43,9 @@ export function ProspectoCard({
             {prospecto.zona ? ` — ${prospecto.zona}` : ''}
           </span>
         )}
-        {prospecto.facturacion_est && <span>Ingresos est.: {prospecto.facturacion_est}</span>}
+        {prospecto.ingresos_miles != null && (
+          <span>Ingresos est.: {prospecto.ingresos_miles.toLocaleString('es-CO')} mil</span>
+        )}
         {prospecto.descripcion && <span>{prospecto.descripcion}</span>}
       </div>
       <div className="flex gap-2 mt-3">
