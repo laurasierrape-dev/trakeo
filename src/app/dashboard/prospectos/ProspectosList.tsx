@@ -5,7 +5,7 @@ import { ProspectoCard } from './ProspectoCard'
 import { ChatFiltro } from '@/components/ChatFiltro'
 import { exportarCSV } from '@/lib/csv'
 import { aprobarProspectosMasivo, descartarProspectosMasivo } from '../actions'
-import type { Prospecto } from '@/lib/types'
+import type { Prospecto, Proyecto } from '@/lib/types'
 
 const selectStyle = {
   backgroundColor: 'white',
@@ -13,10 +13,17 @@ const selectStyle = {
   border: '1px solid #0d2e2315',
 }
 
-export function ProspectosList({ prospectos }: { prospectos: Prospecto[] }) {
+export function ProspectosList({
+  prospectos,
+  proyectos,
+}: {
+  prospectos: Prospecto[]
+  proyectos: Proyecto[]
+}) {
   const [busqueda, setBusqueda] = useState('')
   const [sector, setSector] = useState('')
   const [zona, setZona] = useState('')
+  const [proyectoDestino, setProyectoDestino] = useState('')
   const [idsIA, setIdsIA] = useState<Set<string> | null>(null)
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
@@ -101,6 +108,22 @@ export function ProspectosList({ prospectos }: { prospectos: Prospecto[] }) {
             ))}
           </select>
         )}
+        {proyectos.length > 0 && (
+          <select
+            value={proyectoDestino}
+            onChange={e => setProyectoDestino(e.target.value)}
+            className="rounded-lg px-3 py-2 text-xs focus:outline-none"
+            style={selectStyle}
+            title="Proyecto al que van los que apruebes"
+          >
+            <option value="">Sin proyecto</option>
+            {proyectos.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           onClick={() =>
             exportarCSV(
@@ -152,7 +175,7 @@ export function ProspectosList({ prospectos }: { prospectos: Prospecto[] }) {
                 disabled={isPending}
                 onClick={() =>
                   startTransition(async () => {
-                    await aprobarProspectosMasivo(prospectosSeleccionados)
+                    await aprobarProspectosMasivo(prospectosSeleccionados, proyectoDestino || null)
                     setSeleccionados(new Set())
                   })
                 }
@@ -184,6 +207,7 @@ export function ProspectosList({ prospectos }: { prospectos: Prospecto[] }) {
           <ProspectoCard
             key={p.id}
             prospecto={p}
+            proyectoId={proyectoDestino || null}
             selected={seleccionados.has(p.id)}
             onToggleSelected={() => toggleSeleccionado(p.id)}
           />

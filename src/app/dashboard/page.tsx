@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import type { Contacto } from '@/lib/types'
+import type { Contacto, Proyecto } from '@/lib/types'
 import { ContactosBoard } from './ContactosBoard'
 
 export default async function DashboardPage() {
@@ -9,6 +9,10 @@ export default async function DashboardPage() {
     .from('contactos')
     .select('*')
     .order('proximo_toque', { ascending: true, nullsFirst: false })
+  const { data: proyectos } = await supabase
+    .from('proyectos')
+    .select('*')
+    .order('nombre', { ascending: true })
 
   return (
     <div>
@@ -24,7 +28,10 @@ export default async function DashboardPage() {
           </Link>
         </p>
       ) : (
-        <ContactosBoard contactos={(contactos as Contacto[] | null) ?? []} />
+        <ContactosBoard
+          contactos={(contactos as Contacto[] | null) ?? []}
+          proyectos={(proyectos as Proyecto[] | null) ?? []}
+        />
       )}
     </div>
   )

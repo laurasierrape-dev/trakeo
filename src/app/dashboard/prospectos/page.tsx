@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Prospecto } from '@/lib/types'
+import type { Prospecto, Proyecto } from '@/lib/types'
 import { ProspectosList } from './ProspectosList'
 import { ImportarBase } from './ImportarBase'
 
@@ -10,6 +10,10 @@ export default async function ProspectosPage() {
     .select('*')
     .eq('estado', 'sin_revisar')
     .order('created_at', { ascending: false })
+  const { data: proyectos } = await supabase
+    .from('proyectos')
+    .select('*')
+    .order('nombre', { ascending: true })
 
   return (
     <div>
@@ -27,7 +31,10 @@ export default async function ProspectosPage() {
           No hay prospectos sin revisar por ahora.
         </p>
       ) : (
-        <ProspectosList prospectos={(prospectos as Prospecto[] | null) ?? []} />
+        <ProspectosList
+          prospectos={(prospectos as Prospecto[] | null) ?? []}
+          proyectos={(proyectos as Proyecto[] | null) ?? []}
+        />
       )}
     </div>
   )

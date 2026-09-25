@@ -4,7 +4,7 @@ import { RegenerarBoton } from './RegenerarBoton'
 import { BookmarkletLink } from './BookmarkletLink'
 import { HallazgosList } from './HallazgosList'
 import { createClient } from '@/lib/supabase/server'
-import type { Hallazgo } from '@/lib/types'
+import type { Hallazgo, Proyecto } from '@/lib/types'
 
 const MAX_PAGINAS_BOOKMARKLET = 10
 // Tope de seguridad por página individual — no es el límite del recorrido
@@ -176,6 +176,10 @@ export default async function ScrapingPage() {
     .select('*')
     .eq('estado', 'sin_revisar')
     .order('created_at', { ascending: false })
+  const { data: proyectos } = await supabase
+    .from('proyectos')
+    .select('*')
+    .order('nombre', { ascending: true })
 
   return (
     <div className="max-w-2xl">
@@ -225,7 +229,10 @@ export default async function ScrapingPage() {
             No hay hallazgos sin revisar por ahora.
           </p>
         ) : (
-          <HallazgosList hallazgos={(hallazgos as Hallazgo[] | null) ?? []} />
+          <HallazgosList
+            hallazgos={(hallazgos as Hallazgo[] | null) ?? []}
+            proyectos={(proyectos as Proyecto[] | null) ?? []}
+          />
         )}
       </div>
     </div>

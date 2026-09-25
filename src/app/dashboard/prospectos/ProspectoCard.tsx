@@ -6,10 +6,12 @@ import type { Prospecto } from '@/lib/types'
 
 export function ProspectoCard({
   prospecto,
+  proyectoId,
   selected,
   onToggleSelected,
 }: {
   prospecto: Prospecto
+  proyectoId: string | null
   selected: boolean
   onToggleSelected: () => void
 }) {
@@ -53,7 +55,7 @@ export function ProspectoCard({
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
-              await aprobarProspecto(prospecto)
+              await aprobarProspecto(prospecto, proyectoId)
               setHidden(true)
             })
           }

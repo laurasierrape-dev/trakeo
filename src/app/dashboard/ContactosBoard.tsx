@@ -4,9 +4,10 @@ import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChatFiltro } from '@/components/ChatFiltro'
 import { ContactoRowMenu } from './ContactoRowMenu'
+import { NuevoProyectoModal } from './NuevoProyectoModal'
 import { exportarCSV } from '@/lib/csv'
 import { actualizarTemperaturaMasivo, eliminarContactosMasivo } from './actions'
-import type { Contacto } from '@/lib/types'
+import type { Contacto, Proyecto } from '@/lib/types'
 
 const OPCIONES_TEMPERATURA: Contacto['temperatura'][] = ['frio', 'interesado', 'vinculado']
 
@@ -29,13 +30,25 @@ function Stat({ label, valor }: { label: string; valor: number }) {
   )
 }
 
-export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
+export function ContactosBoard({
+  contactos,
+  proyectos,
+}: {
+  contactos: Contacto[]
+  proyectos: Proyecto[]
+}) {
   const router = useRouter()
   const [idsIA, setIdsIA] = useState<Set<string> | null>(null)
   const [busqueda, setBusqueda] = useState('')
+  const [proyectoFiltro, setProyectoFiltro] = useState('')
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
   const [isPending, startTransition] = useTransition()
+
+  const proyectosPorId = useMemo(
+    () => new Map(proyectos.map(p => [p.id, p.nombre])),
+    [proyectos]
+  )
 
   const stats = useMemo(
     () => ({
@@ -50,6 +63,7 @@ export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
   const filtrados = contactos.filter(c => {
     if (idsIA && !idsIA.has(c.id)) return false
     if (busqueda && !c.nombre_empresa.toLowerCase().includes(busqueda.toLowerCase())) return false
+    if (proyectoFiltro && c.proyecto_id !== proyectoFiltro) return false
     return true
   })
 
@@ -84,7 +98,7 @@ export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
 
       <ChatFiltro items={contactos} onResultado={ids => setIdsIA(ids ? new Set(ids) : null)} />
 
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4">
         <input
           type="text"
           placeholder="Buscar por nombre..."
@@ -93,6 +107,22 @@ export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
           className="rounded-lg px-3 py-2 text-xs focus:outline-none w-full max-w-xs"
           style={{ backgroundColor: 'white', color: '#0d2e23', border: '1px solid #0d2e2315' }}
         />
+        {proyectos.length > 0 && (
+          <select
+            value={proyectoFiltro}
+            onChange={e => setProyectoFiltro(e.target.value)}
+            className="rounded-lg px-3 py-2 text-xs focus:outline-none"
+            style={{ backgroundColor: 'white', color: '#0d2e23', border: '1px solid #0d2e2315' }}
+          >
+            <option value="">Todos los proyectos</option>
+            {proyectos.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        )}
+        <NuevoProyectoModal />
         <button
           onClick={() =>
             exportarCSV(
@@ -205,7 +235,7 @@ export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
                     className="cursor-pointer"
                   />
                 </th>
-                {['Empresa', 'Representante', 'Teléfono', 'Temperatura', 'Próximo toque', ''].map(h => (
+                {['Empresa', 'Representante', 'Teléfono', 'Proyecto', 'Temperatura', 'Próximo toque', ''].map(h => (
                   <th
                     key={h}
                     className="text-left font-medium px-4 py-3 text-xs"
@@ -240,6 +270,18 @@ export function ContactosBoard({ contactos }: { contactos: Contacto[] }) {
                   </td>
                   <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
                     {c.telefono || '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    {c.proyecto_id && proyectosPorId.has(c.proyecto_id) ? (
+                      <span
+                        className="text-xs px-2.5 py-1 rounded-full font-medium"
+                        style={{ backgroundColor: '#0d2e2310', color: '#0d2e23' }}
+                      >
+                        {proyectosPorId.get(c.proyecto_id)}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#0d2e2350' }}>—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span

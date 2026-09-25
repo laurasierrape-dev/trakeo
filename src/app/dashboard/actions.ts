@@ -4,7 +4,28 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { Hallazgo, Prospecto } from '@/lib/types'
 
-export async function aprobarProspecto(prospecto: Prospecto) {
+export async function crearProyecto(nombre: string, criterios: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { error } = await supabase.from('proyectos').insert([
+    {
+      nombre: nombre.trim(),
+      criterios_busqueda: criterios.trim() || null,
+      consultor_id: user.id,
+    },
+  ])
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/prospectos')
+  revalidatePath('/dashboard/scraping')
+}
+
+export async function aprobarProspecto(prospecto: Prospecto, proyectoId?: string | null) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -18,6 +39,7 @@ export async function aprobarProspecto(prospecto: Prospecto) {
       representante: prospecto.representante,
       telefono: prospecto.telefono,
       descripcion: prospecto.descripcion,
+      proyecto_id: proyectoId || null,
       consultor_id: user.id,
     },
   ])
@@ -44,7 +66,7 @@ export async function descartarProspecto(prospectoId: string) {
   revalidatePath('/dashboard/prospectos')
 }
 
-export async function aprobarProspectosMasivo(prospectos: Prospecto[]) {
+export async function aprobarProspectosMasivo(prospectos: Prospecto[], proyectoId?: string | null) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -58,6 +80,7 @@ export async function aprobarProspectosMasivo(prospectos: Prospecto[]) {
       representante: p.representante,
       telefono: p.telefono,
       descripcion: p.descripcion,
+      proyecto_id: proyectoId || null,
       consultor_id: user.id,
     }))
   )
@@ -151,7 +174,7 @@ export async function eliminarContactosMasivo(contactoIds: string[]) {
   revalidatePath('/dashboard/scraping')
 }
 
-export async function aprobarHallazgo(hallazgo: Hallazgo) {
+export async function aprobarHallazgo(hallazgo: Hallazgo, proyectoId?: string | null) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -167,6 +190,7 @@ export async function aprobarHallazgo(hallazgo: Hallazgo) {
       email: hallazgo.email,
       descripcion: hallazgo.descripcion,
       notas: hallazgo.notas,
+      proyecto_id: proyectoId || null,
       consultor_id: user.id,
     },
   ])
@@ -193,7 +217,7 @@ export async function descartarHallazgo(hallazgoId: string) {
   revalidatePath('/dashboard/scraping')
 }
 
-export async function aprobarHallazgosMasivo(hallazgos: Hallazgo[]) {
+export async function aprobarHallazgosMasivo(hallazgos: Hallazgo[], proyectoId?: string | null) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -209,6 +233,7 @@ export async function aprobarHallazgosMasivo(hallazgos: Hallazgo[]) {
       email: h.email,
       descripcion: h.descripcion,
       notas: h.notas,
+      proyecto_id: proyectoId || null,
       consultor_id: user.id,
     }))
   )

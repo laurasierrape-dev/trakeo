@@ -5,10 +5,23 @@ import { HallazgoCard } from './HallazgoCard'
 import { ChatFiltro } from '@/components/ChatFiltro'
 import { exportarCSV } from '@/lib/csv'
 import { aprobarHallazgosMasivo, descartarHallazgosMasivo } from '../actions'
-import type { Hallazgo } from '@/lib/types'
+import type { Hallazgo, Proyecto } from '@/lib/types'
 
-export function HallazgosList({ hallazgos }: { hallazgos: Hallazgo[] }) {
+const selectStyle = {
+  backgroundColor: 'white',
+  color: '#0d2e23',
+  border: '1px solid #0d2e2315',
+}
+
+export function HallazgosList({
+  hallazgos,
+  proyectos,
+}: {
+  hallazgos: Hallazgo[]
+  proyectos: Proyecto[]
+}) {
   const [idsIA, setIdsIA] = useState<Set<string> | null>(null)
+  const [proyectoDestino, setProyectoDestino] = useState('')
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
 
@@ -38,26 +51,44 @@ export function HallazgosList({ hallazgos }: { hallazgos: Hallazgo[] }) {
         onResultado={ids => setIdsIA(ids ? new Set(ids) : null)}
       />
 
-      <button
-        onClick={() =>
-          exportarCSV(
-            filtrados,
-            [
-              { key: 'nombre_empresa', label: 'Empresa' },
-              { key: 'representante', label: 'Representante' },
-              { key: 'telefono', label: 'Teléfono' },
-              { key: 'email', label: 'Email' },
-              { key: 'descripcion', label: 'Descripción' },
-              { key: 'notas', label: 'Notas' },
-            ],
-            'hallazgos.csv'
-          )
-        }
-        className="text-xs rounded-lg px-3 py-2 cursor-pointer whitespace-nowrap mb-4"
-        style={{ border: '1px solid #0d2e2320', color: '#0d2e2380' }}
-      >
-        Exportar CSV
-      </button>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {proyectos.length > 0 && (
+          <select
+            value={proyectoDestino}
+            onChange={e => setProyectoDestino(e.target.value)}
+            className="rounded-lg px-3 py-2 text-xs focus:outline-none"
+            style={selectStyle}
+            title="Proyecto al que van los que apruebes"
+          >
+            <option value="">Sin proyecto</option>
+            {proyectos.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        )}
+        <button
+          onClick={() =>
+            exportarCSV(
+              filtrados,
+              [
+                { key: 'nombre_empresa', label: 'Empresa' },
+                { key: 'representante', label: 'Representante' },
+                { key: 'telefono', label: 'Teléfono' },
+                { key: 'email', label: 'Email' },
+                { key: 'descripcion', label: 'Descripción' },
+                { key: 'notas', label: 'Notas' },
+              ],
+              'hallazgos.csv'
+            )
+          }
+          className="text-xs rounded-lg px-3 py-2 cursor-pointer whitespace-nowrap"
+          style={{ border: '1px solid #0d2e2320', color: '#0d2e2380' }}
+        >
+          Exportar CSV
+        </button>
+      </div>
 
       {filtrados.length === 0 && (
         <p className="text-sm" style={{ color: '#0d2e2380' }}>
@@ -86,7 +117,7 @@ export function HallazgosList({ hallazgos }: { hallazgos: Hallazgo[] }) {
                 disabled={isPending}
                 onClick={() =>
                   startTransition(async () => {
-                    await aprobarHallazgosMasivo(hallazgosSeleccionados)
+                    await aprobarHallazgosMasivo(hallazgosSeleccionados, proyectoDestino || null)
                     setSeleccionados(new Set())
                   })
                 }
@@ -118,6 +149,7 @@ export function HallazgosList({ hallazgos }: { hallazgos: Hallazgo[] }) {
           <HallazgoCard
             key={h.id}
             hallazgo={h}
+            proyectoId={proyectoDestino || null}
             selected={seleccionados.has(h.id)}
             onToggleSelected={() => toggleSeleccionado(h.id)}
           />

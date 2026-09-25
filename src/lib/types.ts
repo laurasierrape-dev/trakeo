@@ -22,6 +22,7 @@ export type Contacto = {
   id: string
   prospecto_id: string | null
   hallazgo_id: string | null
+  proyecto_id: string | null
   nombre_empresa: string
   representante: string | null
   telefono: string | null
@@ -33,6 +34,14 @@ export type Contacto = {
   consultor_id: string
   created_at: string
   updated_at: string
+}
+
+export type Proyecto = {
+  id: string
+  consultor_id: string
+  nombre: string
+  criterios_busqueda: string | null
+  created_at: string
 }
 
 export type Hallazgo = {

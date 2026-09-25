@@ -6,10 +6,12 @@ import type { Hallazgo } from '@/lib/types'
 
 export function HallazgoCard({
   hallazgo,
+  proyectoId,
   selected,
   onToggleSelected,
 }: {
   hallazgo: Hallazgo
+  proyectoId: string | null
   selected: boolean
   onToggleSelected: () => void
 }) {
@@ -46,7 +48,7 @@ export function HallazgoCard({
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
-              await aprobarHallazgo(hallazgo)
+              await aprobarHallazgo(hallazgo, proyectoId)
               setHidden(true)
             })
           }
