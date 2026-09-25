@@ -5,6 +5,7 @@ import { TemperaturaSelector } from './TemperaturaSelector'
 import { ProximoToqueForm } from './ProximoToqueForm'
 import { NuevoToqueForm } from './NuevoToqueForm'
 import { EliminarContactoBoton } from './EliminarContactoBoton'
+import { DescartarContactoBoton } from './DescartarContactoBoton'
 
 export default async function ContactoDetailPage({
   params,
@@ -32,8 +33,16 @@ export default async function ContactoDetailPage({
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}>
+      <h1 className="text-xl font-semibold flex items-center gap-2" style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}>
         {c.nombre_empresa}
+        {c.estado === 'descartado' && (
+          <span
+            className="text-xs font-medium rounded-full px-2.5 py-1"
+            style={{ backgroundColor: '#0d2e2310', color: '#b91c1c' }}
+          >
+            Descartado
+          </span>
+        )}
       </h1>
       <div className="text-sm mt-1 flex flex-col gap-0.5" style={{ color: '#0d2e2380' }}>
         {c.representante && <span>{c.representante}</span>}
@@ -92,7 +101,8 @@ export default async function ContactoDetailPage({
         </div>
       </div>
 
-      <div className="mt-10 pt-6" style={{ borderTop: '1px solid #0d2e2315' }}>
+      <div className="mt-10 pt-6 flex items-center gap-4" style={{ borderTop: '1px solid #0d2e2315' }}>
+        <DescartarContactoBoton contactoId={c.id} estado={c.estado} />
         <EliminarContactoBoton contactoId={c.id} />
       </div>
     </div>

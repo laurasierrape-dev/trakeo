@@ -6,7 +6,7 @@ import { ChatFiltro } from '@/components/ChatFiltro'
 import { ContactoRowMenu } from './ContactoRowMenu'
 import { NuevoProyectoModal } from './NuevoProyectoModal'
 import { exportarCSV } from '@/lib/csv'
-import { actualizarTemperaturaMasivo, eliminarContactosMasivo } from './actions'
+import { actualizarTemperaturaMasivo, eliminarContactosMasivo, descartarContactosMasivo } from './actions'
 import type { Contacto, Proyecto } from '@/lib/types'
 
 const OPCIONES_TEMPERATURA: Contacto['temperatura'][] = ['frio', 'interesado', 'vinculado']
@@ -41,6 +41,7 @@ export function ContactosBoard({
   const [idsIA, setIdsIA] = useState<Set<string> | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [proyectoFiltro, setProyectoFiltro] = useState('')
+  const [mostrarDescartados, setMostrarDescartados] = useState(false)
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -50,17 +51,19 @@ export function ContactosBoard({
     [proyectos]
   )
 
+  const activos = useMemo(() => contactos.filter(c => c.estado === 'activo'), [contactos])
+
   const stats = useMemo(
     () => ({
-      total: contactos.length,
-      interesados: contactos.filter(c => c.temperatura === 'interesado').length,
-      vinculados: contactos.filter(c => c.temperatura === 'vinculado').length,
-      conProximoToque: contactos.filter(c => c.proximo_toque).length,
+      total: activos.length,
+      interesados: activos.filter(c => c.temperatura === 'interesado').length,
+      vinculados: activos.filter(c => c.temperatura === 'vinculado').length,
+      conProximoToque: activos.filter(c => c.proximo_toque).length,
     }),
-    [contactos]
+    [activos]
   )
 
-  const filtrados = contactos.filter(c => {
+  const filtrados = (mostrarDescartados ? contactos : activos).filter(c => {
     if (idsIA && !idsIA.has(c.id)) return false
     if (busqueda && !c.nombre_empresa.toLowerCase().includes(busqueda.toLowerCase())) return false
     if (proyectoFiltro && c.proyecto_id !== proyectoFiltro) return false
@@ -123,6 +126,18 @@ export function ContactosBoard({
           </select>
         )}
         <NuevoProyectoModal />
+        <label
+          className="flex items-center gap-1.5 text-xs cursor-pointer rounded-lg px-3 py-2"
+          style={{ border: '1px solid #0d2e2315', color: '#0d2e2380' }}
+        >
+          <input
+            type="checkbox"
+            checked={mostrarDescartados}
+            onChange={e => setMostrarDescartados(e.target.checked)}
+            className="cursor-pointer"
+          />
+          Mostrar descartados
+        </label>
         <button
           onClick={() =>
             exportarCSV(
@@ -173,6 +188,22 @@ export function ContactosBoard({
               </button>
             ))}
           </div>
+
+          <div className="h-4 w-px" style={{ backgroundColor: '#0d2e2320' }} />
+
+          <button
+            disabled={isPending}
+            onClick={() =>
+              startTransition(async () => {
+                await descartarContactosMasivo(Array.from(seleccionados))
+                limpiarSeleccion()
+              })
+            }
+            className="text-xs rounded-full px-3 py-1.5 cursor-pointer disabled:opacity-50"
+            style={{ border: '1px solid #0d2e2330', color: '#0d2e2380' }}
+          >
+            Descartar seleccionados
+          </button>
 
           <div className="h-4 w-px" style={{ backgroundColor: '#0d2e2320' }} />
 
@@ -252,7 +283,10 @@ export function ContactosBoard({
                   key={c.id}
                   onClick={() => router.push(`/dashboard/contactos/${c.id}`)}
                   className="cursor-pointer transition-colors"
-                  style={{ borderBottom: '1px solid #0d2e2308' }}
+                  style={{
+                    borderBottom: '1px solid #0d2e2308',
+                    opacity: c.estado === 'descartado' ? 0.55 : 1,
+                  }}
                 >
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                     <input
@@ -264,6 +298,11 @@ export function ContactosBoard({
                   </td>
                   <td className="px-4 py-3 font-medium" style={{ color: '#0d2e23' }}>
                     {c.nombre_empresa}
+                    {c.estado === 'descartado' && (
+                      <span className="ml-2 text-xs font-normal" style={{ color: '#b91c1c' }}>
+                        Descartado
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
                     {c.representante || '—'}

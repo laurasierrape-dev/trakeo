@@ -127,6 +127,46 @@ export async function descartarProspectosMasivo(ids: string[]) {
   revalidatePath('/dashboard/prospectos')
 }
 
+// Descartar un contacto (ej. tras un toque que no llevó a nada) lo saca de
+// la vista activa del pipeline sin perder su historial de toques ni
+// revertir el prospecto/hallazgo de origen a revisión — a diferencia de
+// eliminarContacto, que sí deshace la aprobación por completo. Es
+// reversible vía reactivarContacto.
+export async function descartarContacto(contactoId: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('contactos')
+    .update({ estado: 'descartado', updated_at: new Date().toISOString() })
+    .eq('id', contactoId)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard')
+  revalidatePath(`/dashboard/contactos/${contactoId}`)
+}
+
+export async function reactivarContacto(contactoId: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('contactos')
+    .update({ estado: 'activo', updated_at: new Date().toISOString() })
+    .eq('id', contactoId)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard')
+  revalidatePath(`/dashboard/contactos/${contactoId}`)
+}
+
+export async function descartarContactosMasivo(contactoIds: string[]) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('contactos')
+    .update({ estado: 'descartado', updated_at: new Date().toISOString() })
+    .in('id', contactoIds)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard')
+}
+
 export async function eliminarContacto(contactoId: string) {
   const supabase = await createClient()
 

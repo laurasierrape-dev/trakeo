@@ -31,6 +31,7 @@ export type Contacto = {
   temperatura: 'frio' | 'interesado' | 'vinculado'
   proximo_toque: string | null
   notas: string | null
+  estado: 'activo' | 'descartado'
   consultor_id: string
   created_at: string
   updated_at: string

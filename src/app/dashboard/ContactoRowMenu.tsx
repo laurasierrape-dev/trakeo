@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { actualizarTemperatura, eliminarContacto } from './actions'
+import { actualizarTemperatura, eliminarContacto, descartarContacto, reactivarContacto } from './actions'
 import type { Contacto } from '@/lib/types'
 
 const OPCIONES: Contacto['temperatura'][] = ['frio', 'interesado', 'vinculado']
@@ -93,11 +93,25 @@ export function ContactoRowMenu({ contacto }: { contacto: Contacto }) {
                 ))}
               </div>
 
-              <div className="border-t pt-2 px-2" style={{ borderColor: '#0d2e2315' }}>
+              <div className="border-t pt-2 px-2 flex flex-col gap-1.5" style={{ borderColor: '#0d2e2315' }}>
+                <button
+                  disabled={isPending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      if (contacto.estado === 'descartado') await reactivarContacto(contacto.id)
+                      else await descartarContacto(contacto.id)
+                      cerrar()
+                    })
+                  }
+                  className="text-xs cursor-pointer text-left disabled:opacity-50"
+                  style={{ color: '#0d2e2380' }}
+                >
+                  {contacto.estado === 'descartado' ? 'Reactivar' : 'Descartar'}
+                </button>
                 {!confirmandoEliminar ? (
                   <button
                     onClick={() => setConfirmandoEliminar(true)}
-                    className="text-xs cursor-pointer"
+                    className="text-xs cursor-pointer text-left"
                     style={{ color: '#b91c1c' }}
                   >
                     Eliminar
