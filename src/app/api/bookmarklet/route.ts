@@ -2,16 +2,22 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 // La cuenta de Groq usada aquí tiene un límite de 8,000 tokens/minuto para
-// este modelo. El tope de caracteres necesario para quedar bajo eso depende
-// de qué tan denso es el texto: prosa en español (RUES) tokeniza distinto a
-// una tabla de datos densa en códigos/columnas (Orbis) — un 413 real en vivo
-// con contenido de Orbis mostró que 15,000 caracteres ya no alcanza para
-// tablas así, aunque para RUES sí funcionaba. 7,000 deja margen para ambos
-// casos. El bookmarklet manda un POST por página (no todo el recorrido en
-// uno solo), así que este tope es solo una salvaguarda por página individual,
-// no el límite del recorrido completo. Si la cuenta sube de tier, este
-// número se puede subir.
-const MAX_CONTENT_CHARS = 7_000
+// este modelo. Cuántos caracteres caben bajo eso depende de qué tan denso es
+// el texto — prosa en español (RUES) tokeniza muy distinto a una tabla de
+// datos densa en códigos/columnas (Orbis) — así que ningún tope fijo de
+// caracteres es seguro para cualquier sitio futuro. Este número es solo el
+// punto de partida antes de intentar; si Groq igual rechaza el tamaño,
+// reintentarExtraccion() de abajo reduce el contenido según lo que Groq
+// mismo reporta como límite real y vuelve a intentar (ver más abajo).
+const MAX_CONTENT_CHARS = 10_000
+// Groq responde 413 con un mensaje estilo OpenAI: "...Limit 8000, Used 0,
+// Requested 12020...". "Limit" y "Requested" no siempre quedan adyacentes
+// (puede haber "Used X" en medio), así que se buscan por separado en vez de
+// con un solo patrón que asuma el orden exacto. Si el mensaje cambia de
+// formato y no se puede parsear, se encoge a la mitad como respaldo.
+const REGEX_LIMITE_GROQ = /Limit\s+(\d+)/i
+const REGEX_SOLICITADO_GROQ = /Requested\s+(\d+)/i
+const MAX_REINTENTOS = 3
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -109,13 +115,45 @@ async function extraerProspectos(contenido: string, pregunta: string): Promise<P
   })
 
   if (!res.ok) {
-    throw new Error(`Groq API error: ${res.status} ${await res.text()}`)
+    const cuerpo = await res.text()
+    const error = new Error(`Groq API error: ${res.status} ${cuerpo}`) as Error & {
+      status?: number
+      cuerpo?: string
+    }
+    error.status = res.status
+    error.cuerpo = cuerpo
+    throw error
   }
 
   const data = await res.json()
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0]
   if (!toolCall) return []
   return JSON.parse(toolCall.function.arguments).prospectos ?? []
+}
+
+// Reintenta la extracción reduciendo el contenido cuando Groq rechaza el
+// tamaño (413), en vez de depender de adivinar de antemano cuántos
+// caracteres tokenizan seguro para un sitio que nunca hemos visto.
+async function extraerConReintentos(contenido: string, pregunta: string): Promise<ProspectoExtraido[]> {
+  let actual = contenido
+  for (let intento = 1; intento <= MAX_REINTENTOS; intento++) {
+    try {
+      return await extraerProspectos(actual, pregunta)
+    } catch (e) {
+      const err = e as Error & { status?: number; cuerpo?: string }
+      const esUltimoIntento = intento === MAX_REINTENTOS
+      if (err.status !== 413 || esUltimoIntento || actual.length < 500) throw err
+
+      const limite = err.cuerpo?.match(REGEX_LIMITE_GROQ)?.[1]
+      const solicitado = err.cuerpo?.match(REGEX_SOLICITADO_GROQ)?.[1]
+      const proporcion =
+        limite && solicitado
+          ? Math.min(0.9, (Number(limite) / Number(solicitado)) * 0.9)
+          : 0.5
+      actual = actual.slice(0, Math.max(500, Math.floor(actual.length * proporcion)))
+    }
+  }
+  return []
 }
 
 export async function POST(req: NextRequest) {
@@ -150,7 +188,7 @@ export async function POST(req: NextRequest) {
 
   let prospectos: ProspectoExtraido[]
   try {
-    prospectos = await extraerProspectos(contenidoTruncado, String(pregunta ?? ''))
+    prospectos = await extraerConReintentos(contenidoTruncado, String(pregunta ?? ''))
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: `Error extrayendo prospectos: ${e}` },

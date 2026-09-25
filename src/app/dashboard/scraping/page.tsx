@@ -147,7 +147,7 @@ export default async function ScrapingPage() {
       <div className="text-xs mb-6" style={{ color: '#0d2e2360' }}>
         <p className="mb-1">Qué hace: lee el texto visible de esa página y le pide a una IA que identifique prospectos.</p>
         <p className="mb-1">Qué NO hace: no guarda tu contraseña, no inicia sesión por ti, no navega otras páginas por su cuenta.</p>
-        <p>Te va a preguntar dos cosas: qué buscas (para que la IA filtre) y cuántas páginas recorrer (tú decides, hasta {MAX_PAGINAS_BOOKMARKLET}). Manda cada página por separado para no exceder el límite de tu cuenta de IA, así que un recorrido de {MAX_PAGINAS_BOOKMARKLET} páginas puede tardar 1-2 minutos — no cierres la pestaña mientras corre. Si buscas lo mismo dos veces, no duplica lo que ya tienes.</p>
+        <p>Te va a preguntar dos cosas: qué buscas (para que la IA filtre) y cuántas páginas recorrer (tú decides, hasta {MAX_PAGINAS_BOOKMARKLET}). Manda cada página por separado para no exceder el límite de tu cuenta de IA, así que un recorrido de {MAX_PAGINAS_BOOKMARKLET} páginas puede tardar 1-2 minutos — no cierres la pestaña mientras corre. Si una página trae demasiada información de una sola vez (ej. tablas muy densas), Trakeo la recorta automáticamente y reintenta — no debería fallar por eso. Si buscas lo mismo dos veces, no duplica lo que ya tienes.</p>
       </div>
 
       <RegenerarBoton />
