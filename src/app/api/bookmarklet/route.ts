@@ -62,13 +62,17 @@ async function extraerProspectos(contenido: string, pregunta: string): Promise<P
           role: 'user',
           content:
             'Extrae de este texto (copiado de una página web, posiblemente de varias páginas de ' +
-            'resultados concatenadas) una lista de empresas o personas candidatas a prospecto de ' +
-            'negocio, con todo lo que encuentres de cada una: nombre, teléfono, email, ' +
-            'representante legal / contacto principal, cualquier cifra de facturación, ingresos o ' +
-            'ventas anuales que aparezca (cópiala tal cual aparece, con su moneda/unidad), y una ' +
-            'breve descripción de a qué se dedica la empresa si aparece en el texto. Deja cada ' +
-            'campo vacío si no aparece — no inventes datos. No repitas la misma empresa dos veces ' +
-            'si aparece en más de una página. Si no hay ningún candidato claro, devuelve una lista vacía.' +
+            'resultados concatenadas, y a veces incluyendo bloques marcados "--- DETALLE: <url> ---" ' +
+            'con el contenido de la ficha individual de cada resultado) una lista de empresas o ' +
+            'personas candidatas a prospecto de negocio, con todo lo que encuentres de cada una: ' +
+            'nombre, teléfono, email, representante legal / contacto principal, y cualquier cifra ' +
+            'financiera que aparezca — facturación, ingresos, ventas anuales, utilidad, activos, ' +
+            'pasivos o patrimonio (cópiala tal cual aparece, indicando de qué cifra se trata y con ' +
+            'su moneda/unidad) — y una breve descripción de a qué se dedica la empresa si aparece en ' +
+            'el texto. Si un bloque "--- DETALLE ---" corresponde a una empresa que ya aparece en el ' +
+            'listado, une esa información en el mismo registro de esa empresa, no la reportes aparte. ' +
+            'Deja cada campo vacío si no aparece — no inventes datos. No repitas la misma empresa dos ' +
+            'veces si aparece en más de una página. Si no hay ningún candidato claro, devuelve una lista vacía.' +
             instruccionPregunta +
             '\n\n' +
             contenido,
@@ -94,7 +98,9 @@ async function extraerProspectos(contenido: string, pregunta: string): Promise<P
                       representante: { type: ['string', 'null'] },
                       facturacion: {
                         type: ['string', 'null'],
-                        description: 'Cifra de facturación/ingresos/ventas anuales tal como aparece en el texto',
+                        description:
+                          'Cifra financiera tal como aparece en el texto: facturación, ingresos, ventas ' +
+                          'anuales, utilidad, activos, pasivos o patrimonio — indicando de cuál se trata',
                       },
                       descripcion: {
                         type: ['string', 'null'],

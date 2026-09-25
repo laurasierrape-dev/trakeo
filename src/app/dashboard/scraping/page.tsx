@@ -21,13 +21,31 @@ const MAX_CHARS_BOOKMARKLET = 7_000
 // tokens/minuto bajo el límite. A costa de que el recorrido completo tarde
 // más (10 páginas ≈ 1.5-2 min) en vez de fallar con un 413.
 const PAUSA_ENTRE_PAGINAS_MS = 6_000
+// "Profundizar" (opcional, tercer prompt): además de leer el listado, visita
+// la página de detalle de cada resultado para traer representante/teléfono/
+// estados financieros que la vista de listado casi nunca muestra. No se
+// navega la pestaña (eso mataría el script en ejecución) — se trae el HTML
+// con fetch() de mismo origen (hereda la sesión ya logueada) y se parsea con
+// DOMParser. Tope por página para no disparar el tiempo total del recorrido.
+const MAX_DETALLES_POR_PAGINA = 6
+const DETALLE_MAX_CHARS = 3_000
+const PALABRAS_DETALLE = [
+  'ver más', 'ver mas', 'ver información', 'ver informacion', 'ver info',
+  'ver detalle', 'ver ficha', 'ver perfil', 'detalle', 'ficha', 'perfil',
+  'more info', 'view details', 'view profile', 'see more', 'learn more',
+]
 
 function construirBookmarklet(origin: string, token: string): string {
   const codigo = `(async function(){
     var pregunta = prompt("¿Qué buscas en esta página? (opcional)") || "";
     var paginasTexto = prompt("¿Cuántas páginas quieres recorrer como máximo? (1-${MAX_PAGINAS_BOOKMARKLET}, deja vacío para ${MAX_PAGINAS_BOOKMARKLET})") || "";
     var MAX_PAGINAS = Math.min(Math.max(parseInt(paginasTexto, 10) || ${MAX_PAGINAS_BOOKMARKLET}, 1), ${MAX_PAGINAS_BOOKMARKLET});
+    var profundizarTexto = prompt("¿Profundizar en cada resultado para traer representante/teléfono/descripción/estados financieros? Más lento. (s/n, deja vacío para no)") || "";
+    var PROFUNDIZAR = /^s/i.test(profundizarTexto.trim());
     var MAX_CHARS = ${MAX_CHARS_BOOKMARKLET};
+    var MAX_DETALLES = ${MAX_DETALLES_POR_PAGINA};
+    var DETALLE_MAX_CHARS = ${DETALLE_MAX_CHARS};
+    var PALABRAS_DETALLE = ${JSON.stringify(PALABRAS_DETALLE)};
     var paginas = 0;
     var creadosTotal = 0;
     var fallidas = 0;
@@ -65,6 +83,39 @@ function construirBookmarklet(origin: string, token: string): string {
       return null;
     }
 
+    function buscarEnlacesDetalle() {
+      var anclas = document.querySelectorAll('a[href]');
+      var vistos = {};
+      var resultado = [];
+      for (var i = 0; i < anclas.length && resultado.length < MAX_DETALLES; i++) {
+        var el = anclas[i];
+        if (deshabilitado(el)) continue;
+        var txt = (el.textContent || '').trim().toLowerCase();
+        var aria = (el.getAttribute('aria-label') || '').toLowerCase();
+        if (txt.length > 60) continue;
+        var coincide = false;
+        for (var p = 0; p < PALABRAS_DETALLE.length; p++) {
+          if (txt.indexOf(PALABRAS_DETALLE[p]) !== -1 || aria.indexOf(PALABRAS_DETALLE[p]) !== -1) { coincide = true; break; }
+        }
+        if (!coincide) continue;
+        var href = el.href;
+        if (!href || vistos[href]) continue;
+        vistos[href] = true;
+        resultado.push(href);
+      }
+      return resultado;
+    }
+
+    async function traerDetalle(href) {
+      try {
+        var r = await fetch(href, { credentials: "include" });
+        var html = await r.text();
+        var doc = new DOMParser().parseFromString(html, "text/html");
+        var texto = (doc.body ? doc.body.textContent : "") || "";
+        return texto.replace(/\\s+/g, " ").trim().slice(0, DETALLE_MAX_CHARS);
+      } catch (e) { return ""; }
+    }
+
     async function enviarPagina(texto) {
       try {
         var r = await fetch(${JSON.stringify(origin)} + "/api/bookmarklet", {
@@ -78,7 +129,15 @@ function construirBookmarklet(origin: string, token: string): string {
     }
 
     while (paginas < MAX_PAGINAS) {
-      await enviarPagina(document.body.innerText);
+      var textoPagina = document.body.innerText;
+      if (PROFUNDIZAR) {
+        var enlacesDetalle = buscarEnlacesDetalle();
+        for (var d = 0; d < enlacesDetalle.length; d++) {
+          var textoDetalle = await traerDetalle(enlacesDetalle[d]);
+          if (textoDetalle) { textoPagina += "\\n\\n--- DETALLE: " + enlacesDetalle[d] + " ---\\n" + textoDetalle; }
+        }
+      }
+      await enviarPagina(textoPagina);
       paginas++;
       if (paginas >= MAX_PAGINAS) break;
       var siguiente = buscarSiguiente();
@@ -147,7 +206,8 @@ export default async function ScrapingPage() {
       <div className="text-xs mb-6" style={{ color: '#0d2e2360' }}>
         <p className="mb-1">Qué hace: lee el texto visible de esa página y le pide a una IA que identifique prospectos.</p>
         <p className="mb-1">Qué NO hace: no guarda tu contraseña, no inicia sesión por ti, no navega otras páginas por su cuenta.</p>
-        <p>Te va a preguntar dos cosas: qué buscas (para que la IA filtre) y cuántas páginas recorrer (tú decides, hasta {MAX_PAGINAS_BOOKMARKLET}). Manda cada página por separado para no exceder el límite de tu cuenta de IA, así que un recorrido de {MAX_PAGINAS_BOOKMARKLET} páginas puede tardar 1-2 minutos — no cierres la pestaña mientras corre. Si una página trae demasiada información de una sola vez (ej. tablas muy densas), Trakeo la recorta automáticamente y reintenta — no debería fallar por eso. Si buscas lo mismo dos veces, no duplica lo que ya tienes.</p>
+        <p>Te va a preguntar tres cosas: qué buscas (para que la IA filtre), cuántas páginas recorrer (tú decides, hasta {MAX_PAGINAS_BOOKMARKLET}), y si quieres profundizar en cada resultado. Manda cada página por separado para no exceder el límite de tu cuenta de IA, así que un recorrido de {MAX_PAGINAS_BOOKMARKLET} páginas puede tardar 1-2 minutos — no cierres la pestaña mientras corre. Si una página trae demasiada información de una sola vez (ej. tablas muy densas), Trakeo la recorta automáticamente y reintenta — no debería fallar por eso. Si buscas lo mismo dos veces, no duplica lo que ya tienes.</p>
+        <p className="mt-1">Profundizar: si respondes que sí, además del listado visita la ficha de cada resultado (hasta {MAX_DETALLES_POR_PAGINA} por página) para traer representante legal, teléfono y cifras financieras que el listado casi nunca muestra — el recorrido tarda más porque hace ese trabajo extra por cada resultado.</p>
       </div>
 
       <RegenerarBoton />
