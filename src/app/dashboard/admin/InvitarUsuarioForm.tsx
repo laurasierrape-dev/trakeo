@@ -12,12 +12,12 @@ export function InvitarUsuarioForm() {
     e.preventDefault()
     setMensaje(null)
     startTransition(async () => {
-      try {
-        await invitarUsuario(email)
-        setMensaje({ tipo: 'ok', texto: `Invitación enviada a ${email}.` })
+      const resultado = await invitarUsuario(email)
+      if (resultado.ok) {
+        setMensaje({ tipo: 'ok', texto: resultado.mensaje })
         setEmail('')
-      } catch (e) {
-        setMensaje({ tipo: 'error', texto: e instanceof Error ? e.message : 'Algo salió mal.' })
+      } else {
+        setMensaje({ tipo: 'error', texto: resultado.error })
       }
     })
   }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { revocarAcceso, restaurarAcceso, eliminarUsuario } from './actions'
+import { revocarAcceso, restaurarAcceso, eliminarUsuario, type Resultado } from './actions'
 import { formatearFecha } from '@/lib/fechas'
 
 type Usuario = {
@@ -14,6 +14,15 @@ type Usuario = {
 export function UsuarioRow({ usuario }: { usuario: Usuario }) {
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  function ejecutar(accion: () => Promise<Resultado>) {
+    setError(null)
+    startTransition(async () => {
+      const resultado = await accion()
+      if (!resultado.ok) setError(resultado.error)
+    })
+  }
 
   return (
     <tr style={{ borderBottom: '1px solid #0d2e2310' }}>
@@ -39,7 +48,7 @@ export function UsuarioRow({ usuario }: { usuario: Usuario }) {
         {usuario.banned ? (
           <button
             disabled={isPending}
-            onClick={() => startTransition(() => restaurarAcceso(usuario.id))}
+            onClick={() => ejecutar(() => restaurarAcceso(usuario.id))}
             className="text-xs font-semibold rounded-full px-3 py-1.5 cursor-pointer disabled:opacity-50"
             style={{ backgroundColor: '#c5f54a', color: '#0d2e23' }}
           >
@@ -48,7 +57,7 @@ export function UsuarioRow({ usuario }: { usuario: Usuario }) {
         ) : (
           <button
             disabled={isPending}
-            onClick={() => startTransition(() => revocarAcceso(usuario.id))}
+            onClick={() => ejecutar(() => revocarAcceso(usuario.id))}
             className="text-xs rounded-full px-3 py-1.5 cursor-pointer disabled:opacity-50"
             style={{ border: '1px solid #0d2e2330', color: '#0d2e23a0' }}
           >
@@ -63,7 +72,7 @@ export function UsuarioRow({ usuario }: { usuario: Usuario }) {
             </span>
             <button
               disabled={isPending}
-              onClick={() => startTransition(() => eliminarUsuario(usuario.id))}
+              onClick={() => ejecutar(() => eliminarUsuario(usuario.id))}
               className="text-xs font-semibold rounded-full px-3 py-1.5 cursor-pointer disabled:opacity-50"
               style={{ border: '1px solid #b91c1c40', color: '#b91c1c' }}
             >
@@ -87,6 +96,12 @@ export function UsuarioRow({ usuario }: { usuario: Usuario }) {
           >
             Eliminar
           </button>
+        )}
+
+        {error && (
+          <span className="text-xs w-full" style={{ color: '#b91c1c' }}>
+            {error}
+          </span>
         )}
       </td>
     </tr>
