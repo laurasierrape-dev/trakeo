@@ -167,6 +167,29 @@ export async function descartarContactosMasivo(contactoIds: string[]) {
   revalidatePath('/dashboard')
 }
 
+export async function asignarProyecto(contactoId: string, proyectoId: string | null) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('contactos')
+    .update({ proyecto_id: proyectoId, updated_at: new Date().toISOString() })
+    .eq('id', contactoId)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard')
+  revalidatePath(`/dashboard/contactos/${contactoId}`)
+}
+
+export async function asignarProyectoMasivo(contactoIds: string[], proyectoId: string | null) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('contactos')
+    .update({ proyecto_id: proyectoId, updated_at: new Date().toISOString() })
+    .in('id', contactoIds)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard')
+}
+
 export async function eliminarContacto(contactoId: string) {
   const supabase = await createClient()
 

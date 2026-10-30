@@ -3,14 +3,20 @@
 import { useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { actualizarTemperatura, eliminarContacto, descartarContacto, reactivarContacto } from './actions'
-import type { Contacto } from '@/lib/types'
+import {
+  actualizarTemperatura,
+  eliminarContacto,
+  descartarContacto,
+  reactivarContacto,
+  asignarProyecto,
+} from './actions'
+import type { Contacto, Proyecto } from '@/lib/types'
 
 const OPCIONES: Contacto['temperatura'][] = ['frio', 'interesado', 'vinculado']
 const MENU_WIDTH = 224
-const MENU_MAX_HEIGHT = 220
+const MENU_MAX_HEIGHT = 320
 
-export function ContactoRowMenu({ contacto }: { contacto: Contacto }) {
+export function ContactoRowMenu({ contacto, proyectos }: { contacto: Contacto; proyectos: Proyecto[] }) {
   const [abierto, setAbierto] = useState(false)
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -92,6 +98,33 @@ export function ContactoRowMenu({ contacto }: { contacto: Contacto }) {
                   </button>
                 ))}
               </div>
+
+              {proyectos.length > 0 && (
+                <div className="border-t pt-2 px-2 mb-2" style={{ borderColor: '#0d2e2315' }}>
+                  <p className="text-xs pb-1" style={{ color: '#0d2e2360' }}>
+                    Proyecto
+                  </p>
+                  <select
+                    value={contacto.proyecto_id ?? ''}
+                    disabled={isPending}
+                    onClick={e => e.stopPropagation()}
+                    onChange={e =>
+                      startTransition(async () => {
+                        await asignarProyecto(contacto.id, e.target.value || null)
+                      })
+                    }
+                    className="w-full text-xs rounded-lg px-2 py-1.5 cursor-pointer focus:outline-none disabled:opacity-50"
+                    style={{ border: '1px solid #0d2e2320', color: '#0d2e23' }}
+                  >
+                    <option value="">Sin proyecto</option>
+                    {proyectos.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="border-t pt-2 px-2 flex flex-col gap-1.5" style={{ borderColor: '#0d2e2315' }}>
                 <button

@@ -6,6 +6,17 @@ import { ChatFiltro } from '@/components/ChatFiltro'
 import { Modal } from '@/components/Modal'
 import { exportarCSV } from '@/lib/csv'
 import { aprobarProspectosMasivo, descartarProspectosMasivo } from '../actions'
+import {
+  tablaContenedorStyle,
+  tablaHeaderRowStyle,
+  tablaHeaderCellClass,
+  tablaHeaderCellStyle,
+  tablaRowStyle,
+  tablaCellPrimaryClass,
+  tablaCellPrimaryStyle,
+  tablaCellClass,
+  tablaCellStyle,
+} from '@/lib/tableStyles'
 import type { Prospecto, Proyecto } from '@/lib/types'
 
 const selectStyle = {
@@ -205,14 +216,11 @@ export function ProspectosList({
       )}
 
       {filtrados.length > 0 && (
-        <div
-          className="rounded-2xl overflow-hidden overflow-x-auto"
-          style={{ backgroundColor: 'white', border: '1px solid #0d2e2310' }}
-        >
-          <table className="w-full text-sm">
+        <div className="rounded-2xl overflow-hidden overflow-x-auto" style={tablaContenedorStyle}>
+          <table className="w-full">
             <thead>
-              <tr style={{ borderBottom: '1px solid #0d2e2315' }}>
-                <th className="px-4 py-3 text-xs" style={{ color: '#0d2e2360' }} onClick={e => e.stopPropagation()}>
+              <tr style={tablaHeaderRowStyle}>
+                <th className="px-4 py-3" onClick={e => e.stopPropagation()}>
                   <input
                     type="checkbox"
                     checked={seleccionados.size > 0 && seleccionados.size === filtrados.length}
@@ -221,11 +229,7 @@ export function ProspectosList({
                   />
                 </th>
                 {['Empresa', 'Representante', 'Teléfono', 'Sector', 'Ingresos est.'].map(h => (
-                  <th
-                    key={h}
-                    className="text-left font-medium px-4 py-3 text-xs whitespace-nowrap"
-                    style={{ color: '#0d2e2360' }}
-                  >
+                  <th key={h} className={tablaHeaderCellClass} style={tablaHeaderCellStyle}>
                     {h}
                   </th>
                 ))}
@@ -236,10 +240,10 @@ export function ProspectosList({
                 <tr
                   key={p.id}
                   onClick={() => setDetalle(p)}
-                  className="cursor-pointer transition-colors"
-                  style={{ borderBottom: '1px solid #0d2e2308' }}
+                  className="cursor-pointer transition-colors hover:bg-[#0d2e2306]"
+                  style={tablaRowStyle}
                 >
-                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                  <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={seleccionados.has(p.id)}
@@ -247,19 +251,19 @@ export function ProspectosList({
                       className="cursor-pointer"
                     />
                   </td>
-                  <td className="px-4 py-3 font-medium" style={{ color: '#0d2e23' }}>
+                  <td className={tablaCellPrimaryClass} style={tablaCellPrimaryStyle}>
                     {p.razon_social}
                   </td>
-                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                  <td className={tablaCellClass} style={tablaCellStyle}>
                     {p.representante || '—'}
                   </td>
-                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                  <td className={tablaCellClass} style={tablaCellStyle}>
                     {p.telefono || '—'}
                   </td>
-                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                  <td className={tablaCellClass} style={tablaCellStyle}>
                     {p.sector || '—'}
                   </td>
-                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                  <td className={tablaCellClass} style={tablaCellStyle}>
                     {p.ingresos_miles != null ? `${p.ingresos_miles.toLocaleString('es-CO')} mil` : '—'}
                   </td>
                 </tr>

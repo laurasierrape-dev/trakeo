@@ -6,15 +6,33 @@ import { ChatFiltro } from '@/components/ChatFiltro'
 import { ContactoRowMenu } from './ContactoRowMenu'
 import { NuevoProyectoModal } from './NuevoProyectoModal'
 import { exportarCSV } from '@/lib/csv'
-import { actualizarTemperaturaMasivo, eliminarContactosMasivo, descartarContactosMasivo } from './actions'
+import {
+  actualizarTemperaturaMasivo,
+  eliminarContactosMasivo,
+  descartarContactosMasivo,
+  asignarProyectoMasivo,
+} from './actions'
+import {
+  tablaContenedorStyle,
+  tablaHeaderRowStyle,
+  tablaHeaderCellClass,
+  tablaHeaderCellStyle,
+  tablaRowStyle,
+  tablaCellPrimaryClass,
+  tablaCellPrimaryStyle,
+  tablaCellClass,
+  tablaCellStyle,
+  pillEstilo,
+  pillClass,
+} from '@/lib/tableStyles'
 import type { Contacto, Proyecto } from '@/lib/types'
 
 const OPCIONES_TEMPERATURA: Contacto['temperatura'][] = ['frio', 'interesado', 'vinculado']
 
-const PILL_ESTILO: Record<Contacto['temperatura'], { backgroundColor: string; color: string }> = {
-  vinculado: { backgroundColor: '#c5f54a', color: '#0d2e23' },
-  interesado: { backgroundColor: '#c5f54a40', color: '#0d2e23' },
-  frio: { backgroundColor: '#0d2e2310', color: '#0d2e2360' },
+const PILL_ESTILO: Record<Contacto['temperatura'], ReturnType<typeof pillEstilo>> = {
+  vinculado: pillEstilo('activo'),
+  interesado: pillEstilo('suave'),
+  frio: pillEstilo('neutro'),
 }
 
 function Stat({ label, valor }: { label: string; valor: number }) {
@@ -44,6 +62,7 @@ export function ContactosBoard({
   const [mostrarDescartados, setMostrarDescartados] = useState(false)
   const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false)
+  const [proyectoMasivo, setProyectoMasivo] = useState('')
   const [isPending, startTransition] = useTransition()
 
   const proyectosPorId = useMemo(
@@ -189,6 +208,41 @@ export function ContactosBoard({
             ))}
           </div>
 
+          {proyectos.length > 0 && (
+            <>
+              <div className="h-4 w-px" style={{ backgroundColor: '#0d2e2320' }} />
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={proyectoMasivo}
+                  onChange={e => setProyectoMasivo(e.target.value)}
+                  className="text-xs rounded-full px-2.5 py-1.5 cursor-pointer focus:outline-none"
+                  style={{ border: '1px solid #0d2e2330', color: '#0d2e2380' }}
+                >
+                  <option value="">Mover a proyecto...</option>
+                  {proyectos.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  disabled={isPending || !proyectoMasivo}
+                  onClick={() =>
+                    startTransition(async () => {
+                      await asignarProyectoMasivo(Array.from(seleccionados), proyectoMasivo)
+                      setProyectoMasivo('')
+                      limpiarSeleccion()
+                    })
+                  }
+                  className="text-xs font-semibold rounded-full px-3 py-1.5 cursor-pointer disabled:opacity-50"
+                  style={{ backgroundColor: '#0d2e23', color: 'white' }}
+                >
+                  Mover
+                </button>
+              </div>
+            </>
+          )}
+
           <div className="h-4 w-px" style={{ backgroundColor: '#0d2e2320' }} />
 
           <button
@@ -246,19 +300,16 @@ export function ContactosBoard({
         </div>
       )}
 
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{ backgroundColor: 'white', border: '1px solid #0d2e2310' }}
-      >
+      <div className="rounded-2xl overflow-hidden overflow-x-auto" style={tablaContenedorStyle}>
         {filtrados.length === 0 ? (
           <p className="text-sm p-5" style={{ color: '#0d2e2370' }}>
             No hay contactos que coincidan.
           </p>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full">
             <thead>
-              <tr style={{ borderBottom: '1px solid #0d2e2315' }}>
-                <th className="px-4 py-3 text-xs" style={{ color: '#0d2e2360' }}>
+              <tr style={tablaHeaderRowStyle}>
+                <th className="px-4 py-3">
                   <input
                     type="checkbox"
                     checked={seleccionados.size > 0 && seleccionados.size === filtrados.length}
@@ -267,11 +318,7 @@ export function ContactosBoard({
                   />
                 </th>
                 {['Empresa', 'Representante', 'Teléfono', 'Proyecto', 'Temperatura', 'Próximo toque', ''].map(h => (
-                  <th
-                    key={h}
-                    className="text-left font-medium px-4 py-3 text-xs"
-                    style={{ color: '#0d2e2360' }}
-                  >
+                  <th key={h} className={tablaHeaderCellClass} style={tablaHeaderCellStyle}>
                     {h}
                   </th>
                 ))}
@@ -282,13 +329,13 @@ export function ContactosBoard({
                 <tr
                   key={c.id}
                   onClick={() => router.push(`/dashboard/contactos/${c.id}`)}
-                  className="cursor-pointer transition-colors"
+                  className="cursor-pointer transition-colors hover:bg-[#0d2e2306]"
                   style={{
-                    borderBottom: '1px solid #0d2e2308',
-                    opacity: c.estado === 'descartado' ? 0.55 : 1,
+                    ...tablaRowStyle,
+                    opacity: c.estado === 'descartado' ? 0.5 : 1,
                   }}
                 >
-                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                  <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={seleccionados.has(c.id)}
@@ -296,45 +343,42 @@ export function ContactosBoard({
                       className="cursor-pointer"
                     />
                   </td>
-                  <td className="px-4 py-3 font-medium" style={{ color: '#0d2e23' }}>
+                  <td className={tablaCellPrimaryClass} style={tablaCellPrimaryStyle}>
                     {c.nombre_empresa}
                     {c.estado === 'descartado' && (
-                      <span className="ml-2 text-xs font-normal" style={{ color: '#b91c1c' }}>
+                      <span className="ml-2 text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#b91c1c' }}>
                         Descartado
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                  <td className={tablaCellClass} style={tablaCellStyle}>
                     {c.representante || '—'}
                   </td>
-                  <td className="px-4 py-3" style={{ color: '#0d2e2370' }}>
+                  <td className={tablaCellClass} style={tablaCellStyle}>
                     {c.telefono || '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3.5">
                     {c.proyecto_id && proyectosPorId.has(c.proyecto_id) ? (
-                      <span
-                        className="text-xs px-2.5 py-1 rounded-full font-medium"
-                        style={{ backgroundColor: '#0d2e2310', color: '#0d2e23' }}
-                      >
+                      <span className={pillClass} style={pillEstilo('neutro')}>
                         {proyectosPorId.get(c.proyecto_id)}
                       </span>
                     ) : (
-                      <span style={{ color: '#0d2e2350' }}>—</span>
+                      <span style={{ color: '#0d2e2340' }}>—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className="text-xs px-2.5 py-1 rounded-full font-medium capitalize"
-                      style={PILL_ESTILO[c.temperatura]}
-                    >
+                  <td className="px-4 py-3.5">
+                    <span className={`${pillClass} capitalize`} style={PILL_ESTILO[c.temperatura]}>
                       {c.temperatura}
                     </span>
                   </td>
-                  <td className="px-4 py-3" style={{ color: c.proximo_toque ? '#186b54' : '#0d2e2350' }}>
+                  <td
+                    className="px-4 py-3.5 text-[13.5px] font-medium"
+                    style={{ color: c.proximo_toque ? '#186b54' : '#0d2e2340' }}
+                  >
                     {c.proximo_toque || '—'}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <ContactoRowMenu contacto={c} />
+                  <td className="px-4 py-3.5 text-right">
+                    <ContactoRowMenu contacto={c} proyectos={proyectos} />
                   </td>
                 </tr>
               ))}

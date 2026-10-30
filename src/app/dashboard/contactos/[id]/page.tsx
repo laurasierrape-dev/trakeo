@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import type { Contacto, Toque } from '@/lib/types'
+import type { Contacto, Proyecto, Toque } from '@/lib/types'
 import { TemperaturaSelector } from './TemperaturaSelector'
+import { ProyectoSelector } from './ProyectoSelector'
 import { ProximoToqueForm } from './ProximoToqueForm'
 import { NuevoToqueForm } from './NuevoToqueForm'
 import { EliminarContactoBoton } from './EliminarContactoBoton'
@@ -28,6 +29,11 @@ export default async function ContactoDetailPage({
     .select('*')
     .eq('contacto_id', id)
     .order('fecha', { ascending: false })
+
+  const { data: proyectos } = await supabase
+    .from('proyectos')
+    .select('*')
+    .order('nombre', { ascending: true })
 
   const c = contacto as Contacto
 
@@ -57,6 +63,11 @@ export default async function ContactoDetailPage({
 
       <div className="flex flex-wrap gap-6 mt-6">
         <TemperaturaSelector contactoId={c.id} temperatura={c.temperatura} />
+        <ProyectoSelector
+          contactoId={c.id}
+          proyectoId={c.proyecto_id}
+          proyectos={(proyectos as Proyecto[] | null) ?? []}
+        />
         <ProximoToqueForm contactoId={c.id} proximoToque={c.proximo_toque} />
       </div>
 
