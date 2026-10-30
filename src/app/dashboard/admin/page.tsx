@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { InvitarUsuarioForm } from './InvitarUsuarioForm'
 import { UsuarioRow } from './UsuarioRow'
+import { formatearFechaHora } from '@/lib/fechas'
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -106,7 +107,7 @@ export default async function AdminPage() {
                 </td>
                 <td className="py-2 pr-4 text-xs" style={{ color: '#0d2e2370' }}>{log.ip ?? '—'}</td>
                 <td className="py-2 text-xs" style={{ color: '#0d2e2370' }}>
-                  {new Date(log.created_at).toLocaleString('es-CO')}
+                  {formatearFechaHora(log.created_at)}
                 </td>
               </tr>
             ))}

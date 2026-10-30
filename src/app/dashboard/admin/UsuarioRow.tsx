@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { revocarAcceso, restaurarAcceso, eliminarUsuario } from './actions'
+import { formatearFecha } from '@/lib/fechas'
 
 type Usuario = {
   id: string
@@ -20,7 +21,7 @@ export function UsuarioRow({ usuario }: { usuario: Usuario }) {
         {usuario.email}
       </td>
       <td className="py-3 pr-4 text-xs" style={{ color: '#0d2e2370' }}>
-        {new Date(usuario.created_at).toLocaleDateString('es-CO')}
+        {formatearFecha(usuario.created_at)}
       </td>
       <td className="py-3 pr-4 text-xs">
         <span
