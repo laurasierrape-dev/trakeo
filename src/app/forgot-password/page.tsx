@@ -1,0 +1,77 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+
+export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle')
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setStatus('loading')
+
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
+      redirectTo: `${window.location.origin}/auth/callback?next=/establecer-contrasena`,
+    })
+
+    setStatus(error ? 'error' : 'sent')
+  }
+
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ backgroundColor: '#f3efe5' }}
+    >
+      <div className="w-full max-w-sm">
+        <h1
+          className="text-2xl font-semibold mb-1"
+          style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}
+        >
+          Recuperar contraseña
+        </h1>
+        <p className="text-sm mb-6" style={{ color: '#0d2e2380' }}>
+          Te mandamos un link para que elijas una contraseña nueva.
+        </p>
+
+        {status === 'sent' ? (
+          <div className="rounded-2xl p-6" style={{ backgroundColor: '#c5f54a' }}>
+            <p className="text-sm font-medium" style={{ color: '#0d2e23' }}>
+              Revisa tu correo — te enviamos un link para restablecer tu contraseña.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <input
+              type="email"
+              placeholder="tu@email.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              className="rounded-xl px-4 py-3.5 text-sm focus:outline-none"
+              style={{ backgroundColor: 'white', border: '1.5px solid #0d2e2320', color: '#0d2e23' }}
+            />
+            {status === 'error' && (
+              <p className="text-xs" style={{ color: '#b91c1c' }}>
+                Algo salió mal. Intenta de nuevo.
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={status === 'loading'}
+              className="font-semibold rounded-full px-6 py-3.5 transition-colors cursor-pointer text-sm mt-1 disabled:opacity-50"
+              style={{ backgroundColor: '#c5f54a', color: '#0d2e23' }}
+            >
+              {status === 'loading' ? 'Enviando...' : 'Enviarme el link'}
+            </button>
+            <Link href="/login" className="text-xs text-center mt-1" style={{ color: '#0d2e2380' }}>
+              Volver a iniciar sesión
+            </Link>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}

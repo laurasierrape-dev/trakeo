@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, Target, Radar } from 'lucide-react'
+import { Users, Target, Radar, ShieldCheck } from 'lucide-react'
 
 const ITEMS = [
   { href: '/dashboard', label: 'Contactos', icon: Users },
@@ -10,12 +10,15 @@ const ITEMS = [
   { href: '/dashboard/scraping', label: 'Scraping', icon: Radar },
 ] as const
 
-export function SidebarNav() {
+export function SidebarNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname()
+  const items = isAdmin
+    ? [...ITEMS, { href: '/dashboard/admin', label: 'Administración', icon: ShieldCheck }]
+    : ITEMS
 
   return (
     <nav className="flex flex-col gap-1">
-      {ITEMS.map(({ href, label, icon: Icon }) => {
+      {items.map(({ href, label, icon: Icon }) => {
         const activo = href === '/dashboard' ? pathname === href : pathname.startsWith(href)
         return (
           <Link

@@ -10,6 +10,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!user) redirect('/login')
 
+  const { data: admin } = await supabase
+    .from('admins')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#f3efe5' }}>
       <aside
@@ -20,7 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           Trakeo
         </span>
 
-        <SidebarNav />
+        <SidebarNav isAdmin={!!admin} />
 
         <div className="mt-auto pt-6 flex flex-col gap-2 px-3" style={{ borderTop: '1px solid #0d2e2315' }}>
           <span className="text-xs truncate" style={{ color: '#0d2e2360' }}>
