@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -10,6 +10,15 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [linkInvalido, setLinkInvalido] = useState(false)
+
+  // El callback redirige acá con ?error=auth cuando el link del correo ya
+  // expiró o se usó antes. Sin este aviso la pantalla queda muda.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('error') === 'auth') {
+      setLinkInvalido(true)
+    }
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -52,6 +61,16 @@ export default function LoginPage() {
         <p className="text-sm mb-6" style={{ color: '#0d2e2380' }}>
           Ingresa con tu email y contraseña para acceder a tu pipeline.
         </p>
+
+        {linkInvalido && (
+          <div
+            className="rounded-xl px-4 py-3 mb-4 text-xs"
+            style={{ backgroundColor: '#b91c1c10', color: '#b91c1c' }}
+          >
+            El link del correo ya expiró o fue usado. Pide una invitación nueva,
+            o usa &quot;¿Olvidaste tu contraseña?&quot; si ya tienes cuenta.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <input
