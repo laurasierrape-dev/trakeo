@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { PDFParse } from 'pdf-parse'
 import { createClient } from '@/lib/supabase/server'
 import { extraerConReintentos } from '@/lib/extraccionIA'
 
@@ -142,6 +141,15 @@ export async function POST(req: NextRequest) {
   } else if (nombreArchivo.endsWith('.pdf')) {
     let texto: string
     try {
+      // Import diferido a propósito: pdf-parse (vía pdfjs-dist) intenta usar
+      // DOMMatrix/Path2D/ImageData, que no existen en el runtime de Node de
+      // Vercel sin el paquete opcional @napi-rs/canvas — y falla al cargar el
+      // módulo, no solo al usarlo. Con el import estático al tope del
+      // archivo, ESE fallo rompía la ruta completa para CUALQUIER subida
+      // (csv/xlsx incluidos, que nunca tocan este código). Cargar pdf-parse
+      // solo acá adentro hace que ese fallo quede contenido al intentar
+      // subir un PDF específicamente, en vez de tumbar todo el importador.
+      const { PDFParse } = await import('pdf-parse')
       const parser = new PDFParse({ data: buffer })
       const resultado = await parser.getText()
       await parser.destroy()
