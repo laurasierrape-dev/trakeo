@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, Target, Radar, ShieldCheck } from 'lucide-react'
+import { Users, Target, Radar, FolderKanban, ShieldCheck } from 'lucide-react'
 
 const ITEMS = [
   { href: '/dashboard', label: 'Contactos', icon: Users },
   { href: '/dashboard/prospectos', label: 'Prospectos', icon: Target },
   { href: '/dashboard/scraping', label: 'Scraping', icon: Radar },
+  { href: '/dashboard/proyectos', label: 'Proyectos', icon: FolderKanban },
 ] as const
 
 export function SidebarNav({ isAdmin }: { isAdmin: boolean }) {

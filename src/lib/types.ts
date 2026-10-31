@@ -40,6 +40,7 @@ export type Proyecto = {
   id: string
   consultor_id: string
   nombre: string
+  color: string
   criterios_busqueda: string | null
   created_at: string
 }

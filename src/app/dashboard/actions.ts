@@ -27,7 +27,7 @@ export async function buscarCoincidencias(
   }
 }
 
-export async function crearProyecto(nombre: string, criterios: string) {
+export async function crearProyecto(nombre: string, criterios: string, color?: string) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -38,14 +38,74 @@ export async function crearProyecto(nombre: string, criterios: string) {
     {
       nombre: nombre.trim(),
       criterios_busqueda: criterios.trim() || null,
+      color: color || undefined,
       consultor_id: user.id,
     },
   ])
-  if (error) throw new Error(error.message)
+  if (error) {
+    // El índice único (consultor_id, lower(nombre)) da un mensaje técnico de
+    // Postgres — se traduce a algo que el usuario entienda.
+    if (error.message.includes('proyectos_nombre_unico')) {
+      throw new Error('Ya tienes un proyecto con ese nombre.')
+    }
+    throw new Error(error.message)
+  }
 
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/prospectos')
   revalidatePath('/dashboard/scraping')
+  revalidatePath('/dashboard/proyectos')
+}
+
+export async function renombrarProyecto(proyectoId: string, nombre: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { error } = await supabase
+    .from('proyectos')
+    .update({ nombre: nombre.trim() })
+    .eq('id', proyectoId)
+    .eq('consultor_id', user.id)
+  if (error) {
+    if (error.message.includes('proyectos_nombre_unico')) {
+      throw new Error('Ya tienes un proyecto con ese nombre.')
+    }
+    throw new Error(error.message)
+  }
+
+  revalidatePath('/dashboard/proyectos')
+  revalidatePath('/dashboard')
+}
+
+// Eliminar un proyecto nunca borra contactos: si tenía alguno asignado, hay
+// que decidir qué hacer con ellos primero — moverlos a otro proyecto
+// (moverAProyectoId) o dejarlos sin proyecto (null).
+export async function eliminarProyecto(proyectoId: string, moverAProyectoId: string | null) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { error: moveError } = await supabase
+    .from('contactos')
+    .update({ proyecto_id: moverAProyectoId })
+    .eq('proyecto_id', proyectoId)
+    .eq('consultor_id', user.id)
+  if (moveError) throw new Error(moveError.message)
+
+  const { error } = await supabase
+    .from('proyectos')
+    .delete()
+    .eq('id', proyectoId)
+    .eq('consultor_id', user.id)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard/proyectos')
+  revalidatePath('/dashboard')
 }
 
 export async function aprobarProspecto(prospecto: Prospecto, proyectoId?: string | null) {
