@@ -191,14 +191,32 @@ export async function POST(req: NextRequest) {
   const conNit = candidatos.filter(c => c.nit)
   const sinNit = candidatos.filter(c => !c.nit)
 
+  // Antes se usaba upsert(..., {onConflict:'nit', ignoreDuplicates:true}),
+  // que en este entorno marcaba CADA fila como duplicada — incluso con un
+  // NIT que nunca había existido — sin devolver ningún error explícito (un
+  // insert SQL directo con el mismo NIT sí funcionaba, y la policy de
+  // INSERT está abierta, así que no era RLS: algo en cómo PostgREST resolvía
+  // el upsert con ignoreDuplicates se comportaba distinto a lo esperado).
+  // Se reemplaza por el mismo patrón ya usado para sinNit: consultar qué
+  // NITs de este lote ya existen e insertar solo los que no, con un INSERT
+  // simple sin ON CONFLICT — predecible y ya probado en esta misma ruta.
   let nuevosConNit = 0
   for (let i = 0; i < conNit.length; i += TAMANO_LOTE) {
-    const lote = conNit.slice(i, i + TAMANO_LOTE).map(f => ({ ...f, busqueda_id: busquedaId }))
-    const { data, error } = await supabase
+    const lote = conNit.slice(i, i + TAMANO_LOTE)
+    const { data: existentes } = await supabase
       .from('prospectos')
-      .upsert(lote, { onConflict: 'nit', ignoreDuplicates: true })
-      .select('id')
-    if (!error) nuevosConNit += data?.length ?? 0
+      .select('nit')
+      .in('nit', lote.map(c => c.nit as string))
+    const nitsExistentes = new Set((existentes ?? []).map(p => p.nit))
+
+    const nuevosDelLote = lote
+      .filter(c => !nitsExistentes.has(c.nit))
+      .map(f => ({ ...f, busqueda_id: busquedaId }))
+
+    if (nuevosDelLote.length > 0) {
+      const { error } = await supabase.from('prospectos').insert(nuevosDelLote)
+      if (!error) nuevosConNit += nuevosDelLote.length
+    }
   }
   const duplicadosConNit = conNit.length - nuevosConNit
 
