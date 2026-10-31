@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Inbox, Users, Target, Radar, FolderKanban, ShieldCheck } from 'lucide-react'
+import { LayoutGrid, Inbox, Users, Target, Radar, FolderKanban, ShieldCheck } from 'lucide-react'
 
 const ITEMS = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
   { href: '/dashboard/bandeja', label: 'Bandeja', icon: Inbox },
-  { href: '/dashboard', label: 'Contactos', icon: Users },
+  { href: '/dashboard/contactos', label: 'Contactos', icon: Users },
   { href: '/dashboard/proyectos', label: 'Proyectos', icon: FolderKanban },
   { href: '/dashboard/prospectos', label: 'Importar base', icon: Target },
   { href: '/dashboard/scraping', label: 'Bookmarklet', icon: Radar },

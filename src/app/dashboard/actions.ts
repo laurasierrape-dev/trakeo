@@ -51,7 +51,7 @@ export async function crearProyecto(nombre: string, criterios: string, color?: s
     throw new Error(error.message)
   }
 
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/contactos')
   revalidatePath('/dashboard/prospectos')
   revalidatePath('/dashboard/scraping')
   revalidatePath('/dashboard/proyectos')
@@ -77,7 +77,7 @@ export async function renombrarProyecto(proyectoId: string, nombre: string) {
   }
 
   revalidatePath('/dashboard/proyectos')
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/contactos')
 }
 
 // Eliminar un proyecto nunca borra contactos: si tenía alguno asignado, hay
@@ -105,7 +105,7 @@ export async function eliminarProyecto(proyectoId: string, moverAProyectoId: str
   if (error) throw new Error(error.message)
 
   revalidatePath('/dashboard/proyectos')
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/contactos')
 }
 
 export async function aprobarProspecto(prospecto: Prospecto, proyectoId?: string | null) {
@@ -135,6 +135,7 @@ export async function aprobarProspecto(prospecto: Prospecto, proyectoId?: string
 
   revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
+  revalidatePath('/dashboard/contactos')
   revalidatePath('/dashboard')
 }
 
@@ -152,6 +153,7 @@ export async function descartarProspecto(prospectoId: string) {
 
   revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
+  revalidatePath('/dashboard')
 }
 
 export async function aprobarProspectosMasivo(prospectos: Prospecto[], proyectoId?: string | null) {
@@ -181,6 +183,7 @@ export async function aprobarProspectosMasivo(prospectos: Prospecto[], proyectoI
 
   revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
+  revalidatePath('/dashboard/contactos')
   revalidatePath('/dashboard')
 }
 
@@ -198,6 +201,7 @@ export async function descartarProspectosMasivo(ids: string[]) {
 
   revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
+  revalidatePath('/dashboard')
 }
 
 // Descartar un contacto (ej. tras un toque que no llevó a nada) lo saca de
@@ -214,6 +218,7 @@ export async function descartarContacto(contactoId: string) {
   if (error) throw new Error(error.message)
 
   revalidatePath('/dashboard')
+  revalidatePath('/dashboard/contactos')
   revalidatePath(`/dashboard/contactos/${contactoId}`)
 }
 
@@ -226,6 +231,7 @@ export async function reactivarContacto(contactoId: string) {
   if (error) throw new Error(error.message)
 
   revalidatePath('/dashboard')
+  revalidatePath('/dashboard/contactos')
   revalidatePath(`/dashboard/contactos/${contactoId}`)
 }
 
@@ -238,6 +244,7 @@ export async function descartarContactosMasivo(contactoIds: string[]) {
   if (error) throw new Error(error.message)
 
   revalidatePath('/dashboard')
+  revalidatePath('/dashboard/contactos')
 }
 
 export async function asignarProyecto(contactoId: string, proyectoId: string | null) {
@@ -248,7 +255,7 @@ export async function asignarProyecto(contactoId: string, proyectoId: string | n
     .eq('id', contactoId)
   if (error) throw new Error(error.message)
 
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/contactos')
   revalidatePath(`/dashboard/contactos/${contactoId}`)
 }
 
@@ -260,7 +267,7 @@ export async function asignarProyectoMasivo(contactoIds: string[], proyectoId: s
     .in('id', contactoIds)
   if (error) throw new Error(error.message)
 
-  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/contactos')
 }
 
 export async function eliminarContacto(contactoId: string) {
@@ -303,6 +310,7 @@ export async function eliminarContacto(contactoId: string) {
   revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
   revalidatePath('/dashboard/scraping')
+  revalidatePath('/dashboard/contactos')
 }
 
 export async function eliminarContactosMasivo(contactoIds: string[]) {
@@ -347,6 +355,7 @@ export async function eliminarContactosMasivo(contactoIds: string[]) {
   revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
   revalidatePath('/dashboard/scraping')
+  revalidatePath('/dashboard/contactos')
 }
 
 export async function aprobarHallazgo(hallazgo: Hallazgo, proyectoId?: string | null) {
@@ -379,6 +388,7 @@ export async function aprobarHallazgo(hallazgo: Hallazgo, proyectoId?: string | 
 
   revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/scraping')
+  revalidatePath('/dashboard/contactos')
   revalidatePath('/dashboard')
 }
 
@@ -392,6 +402,7 @@ export async function descartarHallazgo(hallazgoId: string) {
 
   revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/scraping')
+  revalidatePath('/dashboard')
 }
 
 export async function aprobarHallazgosMasivo(hallazgos: Hallazgo[], proyectoId?: string | null) {
@@ -424,6 +435,7 @@ export async function aprobarHallazgosMasivo(hallazgos: Hallazgo[], proyectoId?:
 
   revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/scraping')
+  revalidatePath('/dashboard/contactos')
   revalidatePath('/dashboard')
 }
 
@@ -434,6 +446,7 @@ export async function descartarHallazgosMasivo(ids: string[]) {
 
   revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/scraping')
+  revalidatePath('/dashboard')
 }
 
 export async function actualizarTemperatura(
@@ -448,6 +461,7 @@ export async function actualizarTemperatura(
   if (error) throw new Error(error.message)
 
   revalidatePath(`/dashboard/contactos/${contactoId}`)
+  revalidatePath('/dashboard/contactos')
   revalidatePath('/dashboard')
 }
 
@@ -462,6 +476,7 @@ export async function actualizarTemperaturaMasivo(
     .in('id', contactoIds)
   if (error) throw new Error(error.message)
 
+  revalidatePath('/dashboard/contactos')
   revalidatePath('/dashboard')
 }
 
@@ -474,6 +489,7 @@ export async function actualizarProximoToque(contactoId: string, fecha: string |
   if (error) throw new Error(error.message)
 
   revalidatePath(`/dashboard/contactos/${contactoId}`)
+  revalidatePath('/dashboard/contactos')
   revalidatePath('/dashboard')
 }
 

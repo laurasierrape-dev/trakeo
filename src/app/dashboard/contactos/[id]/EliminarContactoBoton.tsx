@@ -32,7 +32,7 @@ export function EliminarContactoBoton({ contactoId }: { contactoId: string }) {
         onClick={() =>
           startTransition(async () => {
             await eliminarContacto(contactoId)
-            router.push('/dashboard')
+            router.push('/dashboard/contactos')
           })
         }
         className="text-xs font-semibold rounded-full px-4 py-2 cursor-pointer disabled:opacity-50"
