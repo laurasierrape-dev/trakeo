@@ -41,6 +41,7 @@ type Item = {
   representante: string | null
   telefono: string | null
   email: string | null
+  vinoDe: string
   raw: Prospecto | Hallazgo
 }
 
@@ -48,11 +49,16 @@ export function BandejaList({
   prospectos,
   hallazgos,
   proyectos,
+  nombresBusqueda = {},
 }: {
   prospectos: Prospecto[]
   hallazgos: Hallazgo[]
   proyectos: Proyecto[]
+  nombresBusqueda?: Record<string, string>
 }) {
+  // El nombre de la búsqueda real (ej. "Alimentos en Bogotá") reemplaza la
+  // etiqueta genérica cuando se conoce — filas de antes de 0013_busquedas.sql
+  // no tienen busqueda_id, y ahí se usa el origen como antes.
   const items = useMemo<Item[]>(
     () => [
       ...prospectos.map(p => ({
@@ -62,6 +68,7 @@ export function BandejaList({
         representante: p.representante,
         telefono: p.telefono,
         email: p.email,
+        vinoDe: (p.busqueda_id && nombresBusqueda[p.busqueda_id]) || 'Importado',
         raw: p,
       })),
       ...hallazgos.map(h => ({
@@ -71,10 +78,11 @@ export function BandejaList({
         representante: h.representante,
         telefono: h.telefono,
         email: h.email,
+        vinoDe: (h.busqueda_id && nombresBusqueda[h.busqueda_id]) || 'Bookmarklet',
         raw: h,
       })),
     ],
-    [prospectos, hallazgos]
+    [prospectos, hallazgos, nombresBusqueda]
   )
 
   const [busqueda, setBusqueda] = useState('')
@@ -187,7 +195,7 @@ export function BandejaList({
             exportarCSV(
               filtrados.map(i => ({
                 empresa: i.nombre_empresa,
-                origen: i.origen === 'prospecto' ? 'Importado' : 'Bookmarklet',
+                origen: i.vinoDe,
                 representante: i.representante ?? '',
                 telefono: i.telefono ?? '',
                 email: i.email ?? '',
@@ -295,7 +303,7 @@ export function BandejaList({
                     {i.nombre_empresa}
                   </td>
                   <td className={tablaCellClass} style={tablaCellStyle}>
-                    {i.origen === 'prospecto' ? 'Importado' : 'Bookmarklet'}
+                    {i.vinoDe}
                   </td>
                   <td className={tablaCellClass} style={tablaCellStyle}>
                     {i.representante || '—'}

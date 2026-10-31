@@ -17,6 +17,7 @@ export default async function DashboardPage() {
     { data: proyectos },
     { data: toquesVencidos },
     { data: interesadosSinProximoPaso },
+    { data: busquedas },
   ] = await Promise.all([
     supabase.from('prospectos').select('*').order('created_at', { ascending: false }),
     supabase.from('prospectos_estado').select('prospecto_id'),
@@ -39,12 +40,14 @@ export default async function DashboardPage() {
       .eq('temperatura', 'interesado')
       .is('proximo_toque', null)
       .order('nombre_empresa', { ascending: true }),
+    supabase.from('busquedas').select('id, nombre'),
   ])
 
   const revisadosIds = new Set((estados ?? []).map(e => e.prospecto_id))
   const prospectosSinRevisar = ((prospectos as Prospecto[] | null) ?? []).filter(
     p => !revisadosIds.has(p.id)
   )
+  const nombresBusqueda = Object.fromEntries((busquedas ?? []).map(b => [b.id, b.nombre]))
 
   return (
     <div>
@@ -62,6 +65,7 @@ export default async function DashboardPage() {
         toquesVencidos={toquesVencidos ?? []}
         interesadosSinProximoPaso={interesadosSinProximoPaso ?? []}
         hoyISO={hoyISO}
+        nombresBusqueda={nombresBusqueda}
       />
     </div>
   )

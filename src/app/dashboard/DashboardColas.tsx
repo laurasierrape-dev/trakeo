@@ -32,6 +32,7 @@ export function DashboardColas({
   toquesVencidos,
   interesadosSinProximoPaso,
   hoyISO,
+  nombresBusqueda,
 }: {
   prospectos: Prospecto[]
   hallazgos: Hallazgo[]
@@ -39,6 +40,7 @@ export function DashboardColas({
   toquesVencidos: ContactoLista[]
   interesadosSinProximoPaso: ContactoLista[]
   hoyISO: string
+  nombresBusqueda?: Record<string, string>
 }) {
   const colas = useMemo(
     () =>
@@ -129,7 +131,12 @@ export function DashboardColas({
       )}
 
       {seleccion === 'porRevisar' && colas.porRevisar > 0 && (
-        <BandejaList prospectos={prospectos} hallazgos={hallazgos} proyectos={proyectos} />
+        <BandejaList
+          prospectos={prospectos}
+          hallazgos={hallazgos}
+          proyectos={proyectos}
+          nombresBusqueda={nombresBusqueda}
+        />
       )}
 
       {seleccion === 'toqueVencido' && colas.toqueVencido > 0 && (

@@ -14,6 +14,16 @@ export type Prospecto = {
   fuente: string | null
   descripcion: string | null
   datos_extra: Record<string, string> | null
+  busqueda_id: string | null
+  created_at: string
+}
+
+export type Busqueda = {
+  id: string
+  consultor_id: string
+  nombre: string
+  origen: 'bookmarklet' | 'csv'
+  proyecto_id: string | null
   created_at: string
 }
 
@@ -55,6 +65,7 @@ export type Hallazgo = {
   descripcion: string | null
   notas: string | null
   estado: 'sin_revisar' | 'aprobado' | 'descartado'
+  busqueda_id: string | null
   created_at: string
 }
 

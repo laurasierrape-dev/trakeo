@@ -27,7 +27,7 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
-  const { token, url, contenido, pregunta } = await req.json()
+  const { token, url, contenido, pregunta, busquedaId } = await req.json()
 
   if (!token || !contenido) {
     return NextResponse.json(
@@ -52,6 +52,35 @@ export async function POST(req: NextRequest) {
       { ok: false, error: 'Token inválido — regenera el bookmarklet desde el dashboard' },
       { status: 401, headers: CORS_HEADERS }
     )
+  }
+
+  // Un "recorrido" manda un POST por página (ver scraping/page.tsx), pero es
+  // una sola búsqueda lógica. La primera página crea el registro en
+  // `busquedas`; el bookmarklet guarda el id devuelto y lo reenvía en las
+  // páginas siguientes para que todas se acumulen bajo la misma búsqueda.
+  let busquedaIdFinal: string = busquedaId ?? ''
+  if (!busquedaIdFinal) {
+    const preguntaTexto = String(pregunta ?? '').trim()
+    let nombreBusqueda = preguntaTexto
+    if (!nombreBusqueda) {
+      try {
+        nombreBusqueda = new URL(String(url)).hostname
+      } catch {
+        nombreBusqueda = 'Bookmarklet'
+      }
+    }
+    const { data: nuevaBusqueda, error: busquedaError } = await supabase
+      .from('busquedas')
+      .insert([{ consultor_id: tokenRow.consultor_id, nombre: nombreBusqueda, origen: 'bookmarklet' }])
+      .select('id')
+      .single()
+    if (busquedaError || !nuevaBusqueda) {
+      return NextResponse.json(
+        { ok: false, error: `No se pudo registrar la búsqueda: ${busquedaError?.message}` },
+        { status: 500, headers: CORS_HEADERS }
+      )
+    }
+    busquedaIdFinal = nuevaBusqueda.id
   }
 
   const contenidoTruncado = String(contenido).slice(0, MAX_CONTENT_CHARS)
@@ -109,10 +138,14 @@ export async function POST(req: NextRequest) {
           descripcion: p.descripcion ?? null,
           notas,
           consultor_id: tokenRow.consultor_id,
+          busqueda_id: busquedaIdFinal,
         }
       })
     )
   }
 
-  return NextResponse.json({ ok: true, creados: prospectosNuevos.length }, { headers: CORS_HEADERS })
+  return NextResponse.json(
+    { ok: true, creados: prospectosNuevos.length, busquedaId: busquedaIdFinal },
+    { headers: CORS_HEADERS }
+  )
 }

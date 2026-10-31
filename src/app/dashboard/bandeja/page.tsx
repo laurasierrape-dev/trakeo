@@ -8,7 +8,7 @@ export default async function BandejaPage() {
   // El estado de un prospecto (aprobado/descartado) es por consultor — ver
   // 0011_prospectos_estado_por_consultor.sql. RLS limita la consulta a
   // prospectos_estado a las filas del usuario actual.
-  const [{ data: prospectos }, { data: estados }, { data: hallazgos }, { data: proyectos }] =
+  const [{ data: prospectos }, { data: estados }, { data: hallazgos }, { data: proyectos }, { data: busquedas }] =
     await Promise.all([
       supabase.from('prospectos').select('*').order('created_at', { ascending: false }),
       supabase.from('prospectos_estado').select('prospecto_id'),
@@ -18,12 +18,17 @@ export default async function BandejaPage() {
         .eq('estado', 'sin_revisar')
         .order('created_at', { ascending: false }),
       supabase.from('proyectos').select('*').order('nombre', { ascending: true }),
+      // Lectura abierta a cualquier autenticado (ver 0013_busquedas.sql) —
+      // necesaria para resolver el nombre de búsquedas de otros consultores
+      // sobre prospectos del pozo común.
+      supabase.from('busquedas').select('id, nombre'),
     ])
 
   const revisadosIds = new Set((estados ?? []).map(e => e.prospecto_id))
   const prospectosSinRevisar = ((prospectos as Prospecto[] | null) ?? []).filter(
     p => !revisadosIds.has(p.id)
   )
+  const nombresBusqueda = new Map((busquedas ?? []).map(b => [b.id, b.nombre]))
 
   return (
     <div>
@@ -39,6 +44,7 @@ export default async function BandejaPage() {
         prospectos={prospectosSinRevisar}
         hallazgos={(hallazgos as Hallazgo[] | null) ?? []}
         proyectos={(proyectos as Proyecto[] | null) ?? []}
+        nombresBusqueda={Object.fromEntries(nombresBusqueda)}
       />
     </div>
   )

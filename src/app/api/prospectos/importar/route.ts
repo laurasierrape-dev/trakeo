@@ -110,6 +110,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Falta el archivo' }, { status: 400 })
   }
 
+  // Cada importación queda registrada como una búsqueda con el nombre del
+  // archivo, para poder ver después "de qué importación vino esta empresa"
+  // en la Bandeja — ver 0013_busquedas.sql.
+  const { data: busqueda, error: busquedaError } = await supabase
+    .from('busquedas')
+    .insert([{ consultor_id: user.id, nombre: archivo.name, origen: 'csv' }])
+    .select('id')
+    .single()
+  if (busquedaError || !busqueda) {
+    return NextResponse.json(
+      { ok: false, error: `No se pudo registrar la búsqueda: ${busquedaError?.message}` },
+      { status: 500 }
+    )
+  }
+  const busquedaId = busqueda.id
+
   const nombreArchivo = archivo.name.toLowerCase()
   const buffer = Buffer.from(await archivo.arrayBuffer())
 
@@ -169,7 +185,7 @@ export async function POST(req: NextRequest) {
 
   let nuevosConNit = 0
   for (let i = 0; i < conNit.length; i += TAMANO_LOTE) {
-    const lote = conNit.slice(i, i + TAMANO_LOTE)
+    const lote = conNit.slice(i, i + TAMANO_LOTE).map(f => ({ ...f, busqueda_id: busquedaId }))
     const { data, error } = await supabase
       .from('prospectos')
       .upsert(lote, { onConflict: 'nit', ignoreDuplicates: true })
@@ -205,7 +221,8 @@ export async function POST(req: NextRequest) {
     duplicadosSinNit += lote.length - nuevosDelLote.length
 
     if (nuevosDelLote.length > 0) {
-      const { error } = await supabase.from('prospectos').insert(nuevosDelLote)
+      const conBusqueda = nuevosDelLote.map(f => ({ ...f, busqueda_id: busquedaId }))
+      const { error } = await supabase.from('prospectos').insert(conBusqueda)
       if (!error) nuevosSinNit += nuevosDelLote.length
     }
   }
@@ -216,5 +233,6 @@ export async function POST(req: NextRequest) {
     nuevos: nuevosConNit + nuevosSinNit,
     duplicados: duplicadosConNit + duplicadosSinNit,
     fallidos,
+    busquedaId,
   })
 }
