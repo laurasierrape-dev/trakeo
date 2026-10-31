@@ -23,8 +23,8 @@ export default async function DashboardPage() {
       {(contactos ?? []).length === 0 ? (
         <p className="text-sm" style={{ color: '#0d2e2380' }}>
           Todavía no tienes contactos.{' '}
-          <Link href="/dashboard/prospectos" style={{ color: '#c5f54a' }}>
-            Revisa los prospectos disponibles →
+          <Link href="/dashboard/bandeja" style={{ color: '#c5f54a' }}>
+            Revisa tu bandeja →
           </Link>
         </p>
       ) : (

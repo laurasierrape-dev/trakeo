@@ -2,9 +2,6 @@ import { headers } from 'next/headers'
 import { obtenerOCrearToken } from './actions'
 import { RegenerarBoton } from './RegenerarBoton'
 import { BookmarkletLink } from './BookmarkletLink'
-import { HallazgosList } from './HallazgosList'
-import { createClient } from '@/lib/supabase/server'
-import type { Hallazgo, Proyecto } from '@/lib/types'
 
 const MAX_PAGINAS_BOOKMARKLET = 10
 // Tope de seguridad por página individual — no es el límite del recorrido
@@ -170,17 +167,6 @@ export default async function ScrapingPage() {
 
   const bookmarkletHref = construirBookmarklet(origin, token)
 
-  const supabase = await createClient()
-  const { data: hallazgos } = await supabase
-    .from('hallazgos')
-    .select('*')
-    .eq('estado', 'sin_revisar')
-    .order('created_at', { ascending: false })
-  const { data: proyectos } = await supabase
-    .from('proyectos')
-    .select('*')
-    .order('nombre', { ascending: true })
-
   return (
     <div className="max-w-2xl">
       <h1 className="text-xl font-semibold mb-1" style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}>
@@ -202,8 +188,8 @@ export default async function ScrapingPage() {
         <BookmarkletLink href={bookmarkletHref} />
         <p className="text-sm mt-4" style={{ color: '#0d2e2380' }}>
           2. Ve a cualquier página donde ya hayas iniciado sesión (ej. tus resultados de Orbis) y
-          haz clic en ese botón desde tu barra de marcadores. Los prospectos que encuentre
-          aparecerán en tu <a href="/dashboard" style={{ color: '#186b54' }}>pipeline</a>.
+          haz clic en ese botón desde tu barra de marcadores. Lo que encuentre aparecerá en tu{' '}
+          <a href="/dashboard/bandeja" style={{ color: '#186b54' }}>bandeja</a> para revisar.
         </p>
       </div>
 
@@ -215,26 +201,6 @@ export default async function ScrapingPage() {
       </div>
 
       <RegenerarBoton />
-
-      <div className="mt-10 pt-8" style={{ borderTop: '1px solid #0d2e2315' }}>
-        <h2 className="text-lg font-semibold mb-1" style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}>
-          Hallazgos por revisar
-        </h2>
-        <p className="text-sm mb-4" style={{ color: '#0d2e2380' }}>
-          Lo que traiga el bookmarklet aparece aquí primero. Aprobar lo pasa a tu pipeline en
-          Contactos; Descartar lo saca de la lista.
-        </p>
-        {(hallazgos ?? []).length === 0 ? (
-          <p className="text-sm" style={{ color: '#0d2e2380' }}>
-            No hay hallazgos sin revisar por ahora.
-          </p>
-        ) : (
-          <HallazgosList
-            hallazgos={(hallazgos as Hallazgo[] | null) ?? []}
-            proyectos={(proyectos as Proyecto[] | null) ?? []}
-          />
-        )}
-      </div>
     </div>
   )
 }

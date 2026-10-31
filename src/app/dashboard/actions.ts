@@ -133,6 +133,7 @@ export async function aprobarProspecto(prospecto: Prospecto, proyectoId?: string
     .upsert([{ prospecto_id: prospecto.id, consultor_id: user.id, estado: 'aprobado' }])
   if (estadoError) throw new Error(estadoError.message)
 
+  revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
   revalidatePath('/dashboard')
 }
@@ -149,6 +150,7 @@ export async function descartarProspecto(prospectoId: string) {
     .upsert([{ prospecto_id: prospectoId, consultor_id: user.id, estado: 'descartado' }])
   if (error) throw new Error(error.message)
 
+  revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
 }
 
@@ -177,6 +179,7 @@ export async function aprobarProspectosMasivo(prospectos: Prospecto[], proyectoI
   )
   if (estadoError) throw new Error(estadoError.message)
 
+  revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
   revalidatePath('/dashboard')
 }
@@ -193,6 +196,7 @@ export async function descartarProspectosMasivo(ids: string[]) {
   )
   if (error) throw new Error(error.message)
 
+  revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
 }
 
@@ -261,6 +265,10 @@ export async function asignarProyectoMasivo(contactoIds: string[], proyectoId: s
 
 export async function eliminarContacto(contactoId: string) {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
 
   const { data: contacto, error: fetchError } = await supabase
     .from('contactos')
@@ -270,10 +278,13 @@ export async function eliminarContacto(contactoId: string) {
   if (fetchError) throw new Error(fetchError.message)
 
   if (contacto.prospecto_id) {
+    // El estado vive en prospectos_estado (por consultor), no en una columna
+    // de la tabla compartida — ver 0011_prospectos_estado_por_consultor.sql.
     const { error } = await supabase
-      .from('prospectos')
-      .update({ estado: 'sin_revisar' })
-      .eq('id', contacto.prospecto_id)
+      .from('prospectos_estado')
+      .delete()
+      .eq('prospecto_id', contacto.prospecto_id)
+      .eq('consultor_id', user.id)
     if (error) throw new Error(error.message)
   }
 
@@ -289,12 +300,17 @@ export async function eliminarContacto(contactoId: string) {
   if (deleteError) throw new Error(deleteError.message)
 
   revalidatePath('/dashboard')
+  revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
   revalidatePath('/dashboard/scraping')
 }
 
 export async function eliminarContactosMasivo(contactoIds: string[]) {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
 
   const { data: contactos, error: fetchError } = await supabase
     .from('contactos')
@@ -306,10 +322,13 @@ export async function eliminarContactosMasivo(contactoIds: string[]) {
   const hallazgoIds = (contactos ?? []).map(c => c.hallazgo_id).filter(Boolean) as string[]
 
   if (prospectoIds.length > 0) {
+    // El estado vive en prospectos_estado (por consultor), no en una columna
+    // de la tabla compartida — ver 0011_prospectos_estado_por_consultor.sql.
     const { error } = await supabase
-      .from('prospectos')
-      .update({ estado: 'sin_revisar' })
-      .in('id', prospectoIds)
+      .from('prospectos_estado')
+      .delete()
+      .in('prospecto_id', prospectoIds)
+      .eq('consultor_id', user.id)
     if (error) throw new Error(error.message)
   }
 
@@ -325,6 +344,7 @@ export async function eliminarContactosMasivo(contactoIds: string[]) {
   if (deleteError) throw new Error(deleteError.message)
 
   revalidatePath('/dashboard')
+  revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/prospectos')
   revalidatePath('/dashboard/scraping')
 }
@@ -357,6 +377,7 @@ export async function aprobarHallazgo(hallazgo: Hallazgo, proyectoId?: string | 
     .eq('id', hallazgo.id)
   if (updateError) throw new Error(updateError.message)
 
+  revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/scraping')
   revalidatePath('/dashboard')
 }
@@ -369,6 +390,7 @@ export async function descartarHallazgo(hallazgoId: string) {
     .eq('id', hallazgoId)
   if (error) throw new Error(error.message)
 
+  revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/scraping')
 }
 
@@ -400,6 +422,7 @@ export async function aprobarHallazgosMasivo(hallazgos: Hallazgo[], proyectoId?:
     .in('id', hallazgos.map(h => h.id))
   if (updateError) throw new Error(updateError.message)
 
+  revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/scraping')
   revalidatePath('/dashboard')
 }
@@ -409,6 +432,7 @@ export async function descartarHallazgosMasivo(ids: string[]) {
   const { error } = await supabase.from('hallazgos').update({ estado: 'descartado' }).in('id', ids)
   if (error) throw new Error(error.message)
 
+  revalidatePath('/dashboard/bandeja')
   revalidatePath('/dashboard/scraping')
 }
 
