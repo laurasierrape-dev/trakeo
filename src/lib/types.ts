@@ -14,7 +14,6 @@ export type Prospecto = {
   fuente: string | null
   descripcion: string | null
   datos_extra: Record<string, string> | null
-  estado: 'sin_revisar' | 'aprobado' | 'descartado'
   created_at: string
 }
 

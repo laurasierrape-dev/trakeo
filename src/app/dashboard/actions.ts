@@ -68,11 +68,10 @@ export async function aprobarProspecto(prospecto: Prospecto, proyectoId?: string
   ])
   if (insertError) throw new Error(insertError.message)
 
-  const { error: updateError } = await supabase
-    .from('prospectos')
-    .update({ estado: 'aprobado' })
-    .eq('id', prospecto.id)
-  if (updateError) throw new Error(updateError.message)
+  const { error: estadoError } = await supabase
+    .from('prospectos_estado')
+    .upsert([{ prospecto_id: prospecto.id, consultor_id: user.id, estado: 'aprobado' }])
+  if (estadoError) throw new Error(estadoError.message)
 
   revalidatePath('/dashboard/prospectos')
   revalidatePath('/dashboard')
@@ -80,10 +79,14 @@ export async function aprobarProspecto(prospecto: Prospecto, proyectoId?: string
 
 export async function descartarProspecto(prospectoId: string) {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
   const { error } = await supabase
-    .from('prospectos')
-    .update({ estado: 'descartado' })
-    .eq('id', prospectoId)
+    .from('prospectos_estado')
+    .upsert([{ prospecto_id: prospectoId, consultor_id: user.id, estado: 'descartado' }])
   if (error) throw new Error(error.message)
 
   revalidatePath('/dashboard/prospectos')
@@ -109,11 +112,10 @@ export async function aprobarProspectosMasivo(prospectos: Prospecto[], proyectoI
   )
   if (insertError) throw new Error(insertError.message)
 
-  const { error: updateError } = await supabase
-    .from('prospectos')
-    .update({ estado: 'aprobado' })
-    .in('id', prospectos.map(p => p.id))
-  if (updateError) throw new Error(updateError.message)
+  const { error: estadoError } = await supabase.from('prospectos_estado').upsert(
+    prospectos.map(p => ({ prospecto_id: p.id, consultor_id: user.id, estado: 'aprobado' as const }))
+  )
+  if (estadoError) throw new Error(estadoError.message)
 
   revalidatePath('/dashboard/prospectos')
   revalidatePath('/dashboard')
@@ -121,7 +123,14 @@ export async function aprobarProspectosMasivo(prospectos: Prospecto[], proyectoI
 
 export async function descartarProspectosMasivo(ids: string[]) {
   const supabase = await createClient()
-  const { error } = await supabase.from('prospectos').update({ estado: 'descartado' }).in('id', ids)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { error } = await supabase.from('prospectos_estado').upsert(
+    ids.map(id => ({ prospecto_id: id, consultor_id: user.id, estado: 'descartado' as const }))
+  )
   if (error) throw new Error(error.message)
 
   revalidatePath('/dashboard/prospectos')
