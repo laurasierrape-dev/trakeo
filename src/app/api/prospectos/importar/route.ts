@@ -203,11 +203,10 @@ export async function POST(req: NextRequest) {
   let nuevosConNit = 0
   for (let i = 0; i < conNit.length; i += TAMANO_LOTE) {
     const lote = conNit.slice(i, i + TAMANO_LOTE)
-    const { data: existentes, error: errorSelect } = await supabase
+    const { data: existentes } = await supabase
       .from('prospectos')
       .select('nit')
       .in('nit', lote.map(c => c.nit as string))
-    console.error('[importar] select existentes:', JSON.stringify({ errorSelect, existentes, nitsBuscados: lote.map(c => c.nit) }))
     const nitsExistentes = new Set((existentes ?? []).map(p => p.nit))
 
     const nuevosDelLote = lote
@@ -215,8 +214,7 @@ export async function POST(req: NextRequest) {
       .map(f => ({ ...f, busqueda_id: busquedaId }))
 
     if (nuevosDelLote.length > 0) {
-      const { data: insertados, error } = await supabase.from('prospectos').insert(nuevosDelLote).select('id')
-      console.error('[importar] insert:', JSON.stringify({ error, insertados, nuevosDelLote }))
+      const { error } = await supabase.from('prospectos').insert(nuevosDelLote)
       if (!error) nuevosConNit += nuevosDelLote.length
     }
   }
