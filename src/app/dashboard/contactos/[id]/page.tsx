@@ -7,6 +7,7 @@ import { ProximoToqueForm } from './ProximoToqueForm'
 import { NuevoToqueForm } from './NuevoToqueForm'
 import { EliminarContactoBoton } from './EliminarContactoBoton'
 import { DescartarContactoBoton } from './DescartarContactoBoton'
+import { formatearFecha } from '@/lib/fechas'
 
 export default async function ContactoDetailPage({
   params,
@@ -24,18 +25,28 @@ export default async function ContactoDetailPage({
 
   if (!contacto) notFound()
 
-  const { data: toques } = await supabase
-    .from('toques')
-    .select('*')
-    .eq('contacto_id', id)
-    .order('fecha', { ascending: false })
-
-  const { data: proyectos } = await supabase
-    .from('proyectos')
-    .select('*')
-    .order('nombre', { ascending: true })
-
   const c = contacto as Contacto
+
+  const [{ data: toques }, { data: proyectos }, { data: prospecto }] = await Promise.all([
+    supabase.from('toques').select('*').eq('contacto_id', id).order('fecha', { ascending: false }),
+    supabase.from('proyectos').select('*').order('nombre', { ascending: true }),
+    // Al aprobar un prospecto solo se copian nombre/representante/teléfono/
+    // descripción a contactos — sector, zona, ingresos y el NIT original se
+    // quedan en la tabla compartida. Se traen acá en vez de duplicarlos en
+    // cada contacto, así nunca quedan desactualizados respecto al prospecto.
+    c.prospecto_id
+      ? supabase
+          .from('prospectos')
+          .select('nit, sector, zona, ingresos_miles, email')
+          .eq('id', c.prospecto_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
+
+  const emailContacto = c.email || prospecto?.email || null
+  const tieneDatosContacto = c.representante || c.telefono || emailContacto
+  const tieneInfoOrigen =
+    !!prospecto && (prospecto.nit || prospecto.sector || prospecto.zona || prospecto.ingresos_miles != null)
 
   return (
     <div className="max-w-2xl">
@@ -50,15 +61,51 @@ export default async function ContactoDetailPage({
           </span>
         )}
       </h1>
-      <div className="text-sm mt-1 flex flex-col gap-0.5" style={{ color: '#0d2e2380' }}>
-        {c.representante && <span>{c.representante}</span>}
-        {c.telefono && <span>{c.telefono}</span>}
-        {c.email && <span>{c.email}</span>}
-      </div>
+
+      {tieneDatosContacto ? (
+        <div className="text-sm mt-1 flex flex-col gap-0.5" style={{ color: '#0d2e2380' }}>
+          {c.representante && <span>{c.representante}</span>}
+          {c.telefono && <span>{c.telefono}</span>}
+          {emailContacto && <span>{emailContacto}</span>}
+        </div>
+      ) : (
+        <p className="text-sm mt-1" style={{ color: '#0d2e2350' }}>
+          Sin representante, teléfono ni email todavía.
+        </p>
+      )}
+
       {c.descripcion && (
         <p className="text-sm mt-3 max-w-lg" style={{ color: '#0d2e2370' }}>
           {c.descripcion}
         </p>
+      )}
+
+      {c.notas && (
+        <p className="text-sm mt-2 max-w-lg" style={{ color: '#0d2e2370' }}>
+          {c.notas}
+        </p>
+      )}
+
+      {tieneInfoOrigen && (
+        <div
+          className="text-xs mt-3 pt-3 flex flex-col gap-0.5 max-w-lg"
+          style={{ borderTop: '1px solid #0d2e2315', color: '#0d2e2370' }}
+        >
+          <p className="font-medium mb-0.5" style={{ color: '#0d2e2360' }}>
+            De la base importada
+          </p>
+          {prospecto!.nit && <span>NIT: {prospecto!.nit}</span>}
+          {(prospecto!.sector || prospecto!.zona) && (
+            <span>
+              {prospecto!.sector}
+              {prospecto!.sector && prospecto!.zona ? ' — ' : ''}
+              {prospecto!.zona}
+            </span>
+          )}
+          {prospecto!.ingresos_miles != null && (
+            <span>Ingresos est.: {prospecto!.ingresos_miles.toLocaleString('es-CO')} mil</span>
+          )}
+        </div>
       )}
 
       <div className="flex flex-wrap gap-6 mt-6">
@@ -99,7 +146,7 @@ export default async function ContactoDetailPage({
                   {t.canal} — {t.resultado}
                 </span>
                 <span style={{ color: '#0d2e2360' }}>
-                  {new Date(t.fecha).toLocaleDateString('es-CO')}
+                  {formatearFecha(t.fecha)}
                 </span>
               </div>
               {t.notas && (
