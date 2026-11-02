@@ -7,9 +7,6 @@ export type Prospecto = {
   email: string | null
   sector: string | null
   zona: string | null
-  // Nota: la columna real en la base es "ingresos_miles" (numeric), no
-  // "facturacion_est" — el nombre original de la migración 0001 quedó
-  // desactualizado tras un cambio de esquema hecho fuera de las migraciones.
   ingresos_miles: number | null
   fuente: string | null
   descripcion: string | null
