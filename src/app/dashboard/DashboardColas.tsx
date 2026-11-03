@@ -27,6 +27,9 @@ const ETIQUETAS: Record<NombreCola, string> = {
 
 export function DashboardColas({
   prospectos,
+  totalProspectos,
+  paginaProspectos,
+  tamanoProspectos,
   hallazgos,
   proyectos,
   toquesVencidos,
@@ -35,6 +38,13 @@ export function DashboardColas({
   nombresBusqueda,
 }: {
   prospectos: Prospecto[]
+  // Total real de prospectos sin revisar (prospectos puede ser solo una
+  // página de ese total — ver src/lib/colaRevision.ts). Sin esto el
+  // contador "Leads por revisar" quedaba capado a lo que Supabase devuelve
+  // por defecto (1000 filas) en vez del total real.
+  totalProspectos: number
+  paginaProspectos: number
+  tamanoProspectos: number
   hallazgos: Hallazgo[]
   proyectos: Proyecto[]
   toquesVencidos: ContactoLista[]
@@ -45,7 +55,7 @@ export function DashboardColas({
   const colas = useMemo(
     () =>
       calcularColas({
-        porRevisar: prospectos.length + hallazgos.length,
+        porRevisar: totalProspectos + hallazgos.length,
         // El cálculo real de las dos colas basadas en fecha ya se hizo en el
         // servidor (son las listas que llegaron por props); acá solo se usan
         // sus largos para los contadores, evitando repetir la lógica de
@@ -64,7 +74,7 @@ export function DashboardColas({
         ],
         hoyISO,
       }),
-    [prospectos.length, hallazgos.length, toquesVencidos, interesadosSinProximoPaso, hoyISO]
+    [totalProspectos, hallazgos.length, toquesVencidos, interesadosSinProximoPaso, hoyISO]
   )
 
   const [seleccion, setSeleccion] = useState<NombreCola | null>(colaMasUrgente(colas))
@@ -133,6 +143,9 @@ export function DashboardColas({
       {seleccion === 'porRevisar' && colas.porRevisar > 0 && (
         <BandejaList
           prospectos={prospectos}
+          totalProspectos={totalProspectos}
+          paginaProspectos={paginaProspectos}
+          tamanoProspectos={tamanoProspectos}
           hallazgos={hallazgos}
           proyectos={proyectos}
           nombresBusqueda={nombresBusqueda}

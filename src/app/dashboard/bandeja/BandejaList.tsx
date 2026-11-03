@@ -24,6 +24,7 @@ import {
   tablaCellStyle,
 } from '@/lib/tableStyles'
 import type { Hallazgo, Prospecto, Proyecto } from '@/lib/types'
+import { Paginador } from './Paginador'
 
 const selectStyle = {
   backgroundColor: 'white',
@@ -50,12 +51,22 @@ export function BandejaList({
   hallazgos,
   proyectos,
   nombresBusqueda = {},
+  paginaProspectos = 1,
+  tamanoProspectos = prospectos.length,
+  totalProspectos = prospectos.length,
 }: {
   prospectos: Prospecto[]
   hallazgos: Hallazgo[]
   proyectos: Proyecto[]
   nombresBusqueda?: Record<string, string>
+  // Prospectos puede ser solo UNA PÁGINA de un pozo mucho más grande (ver
+  // src/lib/colaRevision.ts) — estos tres datos describen esa página para
+  // el paginador. hallazgos siempre llega completo, sin paginar.
+  paginaProspectos?: number
+  tamanoProspectos?: number
+  totalProspectos?: number
 }) {
+  const hayPaginacion = totalProspectos > prospectos.length
   // El nombre de la búsqueda real (ej. "Alimentos en Bogotá") reemplaza la
   // etiqueta genérica cuando se conoce — filas de antes de 0013_busquedas.sql
   // no tienen busqueda_id, y ahí se usa el origen como antes.
@@ -158,7 +169,7 @@ export function BandejaList({
       <div className="flex flex-wrap gap-2 mb-4">
         <input
           type="text"
-          placeholder="Buscar por nombre..."
+          placeholder={hayPaginacion ? 'Buscar por nombre (en esta página)...' : 'Buscar por nombre...'}
           value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
           className="rounded-lg px-3 py-2 text-xs focus:outline-none flex-1 min-w-[180px]"
@@ -316,6 +327,10 @@ export function BandejaList({
             </tbody>
           </table>
         </div>
+      )}
+
+      {hayPaginacion && (
+        <Paginador pagina={paginaProspectos} tamano={tamanoProspectos} total={totalProspectos} />
       )}
 
       <Modal abierto={!!detalle} onCerrar={() => setDetalle(null)} titulo={detalle?.nombre_empresa}>
