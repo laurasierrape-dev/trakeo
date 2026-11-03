@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
   })
 
   if (!res.ok) {
+    const cuerpoError = await res.text()
+    console.error('[chat-filtro] Groq respondió error:', res.status, cuerpoError)
     return NextResponse.json(
       { ok: false, error: `Error del asistente: ${res.status}` },
       { status: 502 }
