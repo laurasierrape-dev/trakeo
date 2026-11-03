@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-const MAX_ITEMS_CHARS = 40_000
+// Groq devuelve 413 si el prompt pasa cierto tamaño — ya pasó antes con el
+// bookmarklet (commit "Bajar tope de caracteres por página de 15,000 a
+// 7,000 (413 real en Orbis)"). Acá el mismo límite de 40,000 volvió a ser
+// insuficiente con una base de muchas columnas (Orbis, 58 columnas) incluso
+// con pocas filas — se baja al mismo valor ya probado seguro.
+const MAX_ITEMS_CHARS = 7_000
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -64,12 +69,11 @@ export async function POST(req: NextRequest) {
   })
 
   if (!res.ok) {
-    const cuerpoError = await res.text()
-    console.error('[chat-filtro] Groq respondió error:', res.status, cuerpoError)
-    return NextResponse.json(
-      { ok: false, error: `Error del asistente: ${res.status}` },
-      { status: 502 }
-    )
+    const error =
+      res.status === 413
+        ? 'La lista es muy grande para la IA — probá con menos resultados en pantalla.'
+        : `Error del asistente: ${res.status}`
+    return NextResponse.json({ ok: false, error }, { status: 502 })
   }
 
   const data = await res.json()

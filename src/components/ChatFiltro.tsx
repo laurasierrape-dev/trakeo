@@ -30,10 +30,19 @@ export function ChatFiltro({
 
     startTransition(async () => {
       try {
+        // "items" trae el objeto completo (raw: Prospecto/Hallazgo) para el
+        // modal de detalle, pero eso incluye datos_extra con TODAS las
+        // columnas no mapeadas de la importación — con una base como la de
+        // Orbis (58 columnas) eso infla cada fila mucho más de lo que la IA
+        // necesita para filtrar. Se excluye "raw" acá en vez de en
+        // BandejaList porque ahí sí hace falta para el detalle.
         const res = await fetch('/api/chat-filtro', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items, pregunta: preguntaActual }),
+          body: JSON.stringify(
+            { items, pregunta: preguntaActual },
+            (clave, valor) => (clave === 'raw' ? undefined : valor)
+          ),
         })
         const data = await res.json()
         if (!data.ok) throw new Error(data.error)
@@ -41,11 +50,12 @@ export function ChatFiltro({
         setHistorial(h => [...h.slice(-2), { pregunta: preguntaActual, respuesta: data.respuesta }])
         setActivo(true)
         onResultado(data.ids, data.respuesta)
-      } catch {
-        setHistorial(h => [
-          ...h.slice(-2),
-          { pregunta: preguntaActual, respuesta: 'No se pudo procesar la pregunta. Intenta de nuevo.' },
-        ])
+      } catch (e) {
+        const respuesta =
+          e instanceof Error && e.message
+            ? e.message
+            : 'No se pudo procesar la pregunta. Intenta de nuevo.'
+        setHistorial(h => [...h.slice(-2), { pregunta: preguntaActual, respuesta }])
       }
     })
   }
