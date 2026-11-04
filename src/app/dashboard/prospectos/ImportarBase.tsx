@@ -3,7 +3,17 @@
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { leerArchivoTabular, type ArchivoTabular } from '@/lib/parsearTabular'
-import { CAMPOS_DESTINO, mapearFilaConMapeo, sugerirMapeo, type FilaMapeada, type Mapeo } from '@/lib/importarMapeo'
+import {
+  CAMPOS_DESTINO,
+  mapearFilaConMapeo,
+  sugerirMapeo,
+  type CampoDestino,
+  type CampoPersonalizado,
+  type DestinoMapeo,
+  type FilaMapeada,
+  type Mapeo,
+} from '@/lib/importarMapeo'
+import { confirmarCampoPersonalizado, obtenerCamposPersonalizados } from './camposActions'
 
 type Resumen = {
   filasLeidas: number
@@ -16,6 +26,9 @@ type Resumen = {
 // límite de Vercel (~4.5MB) incluso con archivos de decenas de miles de
 // filas, y permite mostrar progreso en vez de una sola espera larga.
 const FILAS_POR_LOTE = 2000
+
+const SIN_USAR = ''
+const NUEVO_CAMPO = '__nuevo__'
 
 type Paso =
   | { tipo: 'idle' }
@@ -30,11 +43,19 @@ const selectEstilo = {
   border: '1px solid #0d2e2315',
 }
 
+function valorSelect(destino: DestinoMapeo, camposPersonalizados: CampoPersonalizado[]): string {
+  if (!destino) return SIN_USAR
+  if (destino.tipo === 'fijo') return `fijo:${destino.campo}`
+  const existe = camposPersonalizados.some(c => c.nombre === destino.nombre)
+  return existe ? `dinamico:${destino.nombre}` : NUEVO_CAMPO
+}
+
 export function ImportarBase() {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [isPending, startTransition] = useTransition()
   const [paso, setPaso] = useState<Paso>({ tipo: 'idle' })
+  const [camposPersonalizados, setCamposPersonalizados] = useState<CampoPersonalizado[]>([])
   const [resumen, setResumen] = useState<Resumen | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -76,7 +97,7 @@ export function ImportarBase() {
       if (tabular.hojas.length > 1) {
         setPaso({ tipo: 'hoja', archivo, tabular, hoja: tabular.hojaSugerida })
       } else {
-        irAMapeo(archivo, tabular, tabular.hojaSugerida)
+        await irAMapeo(archivo, tabular, tabular.hojaSugerida)
       }
     } catch (e) {
       setError(`No se pudo leer el archivo: ${e instanceof Error ? e.message : String(e)}`)
@@ -84,14 +105,20 @@ export function ImportarBase() {
     }
   }
 
-  function irAMapeo(archivo: File, tabular: ArchivoTabular, hoja: string) {
+  async function irAMapeo(archivo: File, tabular: ArchivoTabular, hoja: string) {
     const { headers, filas } = tabular.obtenerFilas(hoja)
     if (headers.length === 0 || filas.length === 0) {
       setError(`La hoja "${hoja}" no tiene datos legibles.`)
       reiniciar()
       return
     }
-    setPaso({ tipo: 'mapeo', archivo, headers, filas, mapeo: sugerirMapeo(headers) })
+    // El diccionario de campos personalizados es compartido entre todo el
+    // equipo (ver 0015_campos_personalizados.sql) — se trae acá para que la
+    // sugerencia de mapeo también considere lo que ya se mapeó antes, no
+    // solo los 8 campos fijos.
+    const campos = await obtenerCamposPersonalizados()
+    setCamposPersonalizados(campos)
+    setPaso({ tipo: 'mapeo', archivo, headers, filas, mapeo: sugerirMapeo(headers, campos) })
   }
 
   function irAPreview(archivo: File, filas: Record<string, unknown>[], mapeo: Mapeo) {
@@ -107,8 +134,24 @@ export function ImportarBase() {
     })
   }
 
-  async function importar(archivo: File, candidatos: FilaMapeada[]) {
+  async function importar(archivo: File, candidatos: FilaMapeada[], mapeo: Mapeo) {
     setError(null)
+
+    // Antes de importar, confirma cada columna mapeada a un campo
+    // personalizado — esto es lo que graba el sinónimo en el diccionario
+    // compartido (crea el campo si es nuevo, o solo le suma el encabezado
+    // si ya existía). Se hace una sola vez acá, no en el paso de mapeo, para
+    // no ensuciar el diccionario si el consultor cancela antes de importar.
+    const dinamicos = Object.entries(mapeo).filter(
+      (e): e is [string, Extract<DestinoMapeo, { tipo: 'dinamico' }>] => e[1]?.tipo === 'dinamico'
+    )
+    try {
+      await Promise.all(dinamicos.map(([header, destino]) => confirmarCampoPersonalizado(header, destino.nombre)))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudieron registrar los campos personalizados.')
+      return
+    }
+
     const totalLotes = Math.max(1, Math.ceil(candidatos.length / FILAS_POR_LOTE))
     let busquedaId: string | undefined
     let acumulado: Resumen = { filasLeidas: candidatos.length, nuevos: 0, duplicados: 0, fallidos: 0 }
@@ -145,6 +188,18 @@ export function ImportarBase() {
       reiniciar()
     })
   }
+
+  function actualizarDestino(paso: Extract<Paso, { tipo: 'mapeo' }>, header: string, valorCrudo: string) {
+    let destino: DestinoMapeo
+    if (valorCrudo === SIN_USAR) destino = null
+    else if (valorCrudo === NUEVO_CAMPO) destino = { tipo: 'dinamico', nombre: header }
+    else if (valorCrudo.startsWith('fijo:')) destino = { tipo: 'fijo', campo: valorCrudo.slice(5) as CampoDestino }
+    else destino = { tipo: 'dinamico', nombre: valorCrudo.slice('dinamico:'.length) }
+    setPaso({ ...paso, mapeo: { ...paso.mapeo, [header]: destino } })
+  }
+
+  const tieneRazonSocial =
+    paso.tipo === 'mapeo' && Object.values(paso.mapeo).some(d => d?.tipo === 'fijo' && d.campo === 'razon_social')
 
   return (
     <div className="rounded-2xl p-5 mb-6" style={{ backgroundColor: 'white', border: '1px solid #0d2e2310' }}>
@@ -226,7 +281,8 @@ export function ImportarBase() {
         <div className="mt-4">
           <p className="text-xs mb-3" style={{ color: '#0d2e2380' }}>
             {paso.filas.length} fila(s) detectadas. Decí a qué campo va cada columna — &ldquo;Razón social&rdquo; es la única
-            obligatoria, el resto queda guardado como dato adicional si no la mapeás.
+            obligatoria. Lo que mapees como campo personalizado queda visible en el detalle del contacto, y Trakeo
+            recuerda la columna para la próxima importación.
           </p>
           <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #0d2e2312' }}>
             <table className="w-full">
@@ -241,45 +297,74 @@ export function ImportarBase() {
                 </tr>
               </thead>
               <tbody>
-                {paso.headers.map(header => (
-                  <tr key={header} style={{ borderBottom: '1px solid #0d2e230d' }}>
-                    <td className="px-3 py-2 text-[12.5px]" style={{ color: '#0d2e23' }}>
-                      {header}
-                    </td>
-                    <td className="px-3 py-2">
-                      <select
-                        value={paso.mapeo[header] ?? ''}
-                        onChange={e => {
-                          const campo = e.target.value || null
-                          setPaso({ ...paso, mapeo: { ...paso.mapeo, [header]: campo as Mapeo[string] } })
-                        }}
-                        className="text-xs rounded-lg px-2 py-1.5 w-full"
-                        style={selectEstilo}
-                      >
-                        <option value="">No usar</option>
-                        {CAMPOS_DESTINO.map(c => (
-                          <option key={c.id} value={c.id}>
-                            {c.label}
-                            {c.requerido ? ' *' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
+                {paso.headers.map(header => {
+                  const destino = paso.mapeo[header]
+                  const select = valorSelect(destino, camposPersonalizados)
+                  const creandoNuevo = select === NUEVO_CAMPO
+                  return (
+                    <tr key={header} style={{ borderBottom: '1px solid #0d2e230d' }}>
+                      <td className="px-3 py-2 text-[12.5px] align-top" style={{ color: '#0d2e23' }}>
+                        {header}
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={select}
+                          onChange={e => actualizarDestino(paso, header, e.target.value)}
+                          className="text-xs rounded-lg px-2 py-1.5 w-full"
+                          style={selectEstilo}
+                        >
+                          <option value={SIN_USAR}>No usar</option>
+                          <optgroup label="Campos fijos">
+                            {CAMPOS_DESTINO.map(c => (
+                              <option key={c.id} value={`fijo:${c.id}`}>
+                                {c.label}
+                                {c.requerido ? ' *' : ''}
+                              </option>
+                            ))}
+                          </optgroup>
+                          {camposPersonalizados.length > 0 && (
+                            <optgroup label="Campos personalizados">
+                              {camposPersonalizados.map(c => (
+                                <option key={c.id} value={`dinamico:${c.nombre}`}>
+                                  {c.nombre}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          <option value={NUEVO_CAMPO}>+ Crear campo nuevo</option>
+                        </select>
+                        {creandoNuevo && destino?.tipo === 'dinamico' && (
+                          <input
+                            type="text"
+                            value={destino.nombre}
+                            onChange={e =>
+                              setPaso({
+                                ...paso,
+                                mapeo: { ...paso.mapeo, [header]: { tipo: 'dinamico', nombre: e.target.value } },
+                              })
+                            }
+                            placeholder="Nombre del campo nuevo"
+                            className="text-xs rounded-lg px-2 py-1.5 w-full mt-1.5"
+                            style={{ border: '1px solid #186b54', color: '#0d2e23' }}
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
           <button
             type="button"
-            disabled={!Object.values(paso.mapeo).includes('razon_social')}
+            disabled={!tieneRazonSocial}
             onClick={() => irAPreview(paso.archivo, paso.filas, paso.mapeo)}
             className="text-xs font-semibold rounded-full px-4 py-2 mt-3 disabled:opacity-40"
             style={{ backgroundColor: '#c5f54a', color: '#0d2e23' }}
           >
             Ver preview
           </button>
-          {!Object.values(paso.mapeo).includes('razon_social') && (
+          {!tieneRazonSocial && (
             <p className="text-xs mt-2" style={{ color: '#b91c1c' }}>
               Mapeá al menos una columna como &ldquo;Razón social&rdquo; para continuar.
             </p>
@@ -334,7 +419,7 @@ export function ImportarBase() {
             <button
               type="button"
               disabled={paso.candidatos.length === 0}
-              onClick={() => importar(paso.archivo, paso.candidatos)}
+              onClick={() => importar(paso.archivo, paso.candidatos, paso.mapeo)}
               className="text-xs font-semibold rounded-full px-4 py-2 disabled:opacity-40"
               style={{ backgroundColor: '#c5f54a', color: '#0d2e23' }}
             >

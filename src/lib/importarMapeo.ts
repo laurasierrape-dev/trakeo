@@ -57,35 +57,63 @@ export type FilaMapeada = {
   datos_extra: Record<string, string> | null
 }
 
-// Mapeo columna original -> campo destino (o null si la columna no se usa).
-export type Mapeo = Record<string, CampoDestino | null>
+// Un campo personalizado del diccionario compartido (ver
+// 0015_campos_personalizados.sql) — "sinonimos" son encabezados ya vistos
+// (normalizados) que la gente confirmó que significan este mismo campo.
+export type CampoPersonalizado = {
+  id: string
+  nombre: string
+  sinonimos: string[]
+}
 
-// Para cada encabezado detectado, sugiere a qué campo mapearlo según el
-// diccionario de sinónimos — ya no se evalúa fila por fila como antes
-// (la columna se decide una sola vez, no 46,000 veces), y queda disponible
-// como punto de partida editable en la UI de mapeo.
-export function sugerirMapeo(headers: string[]): Mapeo {
+// A qué destino va una columna: uno de los 8 campos fijos, un campo
+// personalizado (del diccionario compartido — "dinamico" cubre tanto uno ya
+// existente como uno nuevo que se crea al confirmar el mapeo), o nada.
+export type DestinoMapeo = { tipo: 'fijo'; campo: CampoDestino } | { tipo: 'dinamico'; nombre: string } | null
+
+// Mapeo columna original -> destino.
+export type Mapeo = Record<string, DestinoMapeo>
+
+// Para cada encabezado detectado, sugiere a qué campo mapearlo: primero
+// contra los 8 fijos, y si no matchea ninguno, contra el diccionario de
+// campos personalizados (por sinónimo ya visto, o por coincidencia directa
+// con el nombre del campo). Ya no se evalúa fila por fila como antes (la
+// columna se decide una sola vez, no 46,000 veces), y queda disponible como
+// punto de partida editable en la UI de mapeo.
+export function sugerirMapeo(headers: string[], camposPersonalizados: CampoPersonalizado[] = []): Mapeo {
   const mapeo: Mapeo = {}
   const usados = new Set<CampoDestino>()
   for (const header of headers) {
     const headerNorm = normalizar(String(header ?? ''))
-    let campo: CampoDestino | null = null
-    for (const [destino, sinonimos] of Object.entries(SINONIMOS) as [CampoDestino, string[]][]) {
-      if (usados.has(destino)) continue
+    let destino: DestinoMapeo = null
+
+    for (const [campo, sinonimos] of Object.entries(SINONIMOS) as [CampoDestino, string[]][]) {
+      if (usados.has(campo)) continue
       if (sinonimos.some(s => headerNorm === normalizar(s))) {
-        campo = destino
+        destino = { tipo: 'fijo', campo }
         break
       }
     }
-    if (campo) usados.add(campo)
-    mapeo[header] = campo
+
+    if (!destino) {
+      const campoDinamico = camposPersonalizados.find(
+        c => c.sinonimos.includes(headerNorm) || normalizar(c.nombre) === headerNorm
+      )
+      if (campoDinamico) destino = { tipo: 'dinamico', nombre: campoDinamico.nombre }
+    }
+
+    if (destino?.tipo === 'fijo') usados.add(destino.campo)
+    mapeo[header] = destino
   }
   return mapeo
 }
 
 // Mapea una fila cruda (objeto columna original -> valor) usando un mapeo ya
 // confirmado — a diferencia del mapeo automático por sinónimos, acá cada
-// columna va exactamente a donde el usuario la puso, sin adivinar.
+// columna va exactamente a donde el usuario la puso, sin adivinar. Los
+// campos personalizados caen en datos_extra, pero con el nombre canónico
+// del campo (no el encabezado original del archivo) — así dos importaciones
+// con "Ciudad" y "City" terminan en la misma llave.
 export function mapearFilaConMapeo(
   fila: Record<string, unknown>,
   mapeo: Mapeo
@@ -96,15 +124,18 @@ export function mapearFilaConMapeo(
   for (const [header, valor] of Object.entries(fila)) {
     if (valor === null || valor === undefined || String(valor).trim() === '') continue
     const valorTexto = String(valor).trim()
-    const campo = mapeo[header]
-    if (campo) {
-      if (!mapeada[campo]) mapeada[campo] = valorTexto
-    } else if (campo === undefined) {
+    const destino = mapeo[header]
+    if (destino?.tipo === 'fijo') {
+      if (!mapeada[destino.campo]) mapeada[destino.campo] = valorTexto
+    } else if (destino?.tipo === 'dinamico') {
+      if (!(destino.nombre in extra)) extra[destino.nombre] = valorTexto
+    } else if (destino === undefined) {
       // Columna que no apareció en el mapeo (no debería pasar si el mapeo
       // se construyó desde los mismos headers, pero por si acaso no se
       // pierde el dato).
       extra[header] = valorTexto
     }
+    // destino === null ("No usar") descarta el valor a propósito.
   }
 
   if (!mapeada.razon_social) return null
@@ -128,10 +159,10 @@ export function mapearFilaConMapeo(
   }
 }
 
-// Mapeo 100% automático por sinónimos, evaluado fila por fila — se mantiene
-// solo para el flujo de PDF (la IA ya devuelve columnas fijas conocidas,
-// nunca pasa por la UI de mapeo porque no hay "hoja" ni "encabezados" que
-// elegir).
+// Mapeo 100% automático por sinónimos fijos, evaluado fila por fila — se
+// mantiene solo para el flujo de PDF (la IA ya devuelve columnas fijas
+// conocidas, nunca pasa por la UI de mapeo ni conoce campos personalizados
+// porque no hay "hoja" ni "encabezados" que elegir).
 export function mapearFilaAutomatico(fila: Record<string, unknown>): FilaMapeada | null {
   const headers = Object.keys(fila)
   const mapeo = sugerirMapeo(headers)

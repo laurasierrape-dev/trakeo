@@ -38,15 +38,24 @@ export default async function ContactoDetailPage({
     c.prospecto_id
       ? supabase
           .from('prospectos')
-          .select('nit, sector, zona, ingresos_miles, email')
+          .select('nit, sector, zona, ingresos_miles, email, datos_extra')
           .eq('id', c.prospecto_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
   ])
 
   const emailContacto = c.email || prospecto?.email || null
+  // Columnas que no entraron en los 8 campos fijos de la importación (ver
+  // Fase 2 de "Datos Desbloqueados") — ya vienen con el nombre canónico del
+  // campo personalizado, no el encabezado crudo del archivo original.
+  const datosExtra = (prospecto?.datos_extra as Record<string, string> | null) ?? null
   const tieneInfoOrigen =
-    !!prospecto && (prospecto.nit || prospecto.sector || prospecto.zona || prospecto.ingresos_miles != null)
+    !!prospecto &&
+    (prospecto.nit ||
+      prospecto.sector ||
+      prospecto.zona ||
+      prospecto.ingresos_miles != null ||
+      (datosExtra && Object.keys(datosExtra).length > 0))
 
   return (
     <div className="max-w-2xl">
@@ -103,6 +112,12 @@ export default async function ContactoDetailPage({
           {prospecto!.ingresos_miles != null && (
             <span>Ingresos est.: {prospecto!.ingresos_miles.toLocaleString('es-CO')} mil</span>
           )}
+          {datosExtra &&
+            Object.entries(datosExtra).map(([campo, valor]) => (
+              <span key={campo}>
+                {campo}: {valor}
+              </span>
+            ))}
         </div>
       )}
 
