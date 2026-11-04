@@ -3,6 +3,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { Hallazgo, Prospecto } from '@/lib/types'
+import {
+  esCampoContactoEditable,
+  limpiarDatosContactoManual,
+  limpiarValorCampoContacto,
+  type CampoContactoEditable,
+  type DatosContactoManual,
+} from '@/lib/contactoManual'
 
 // HU-04: al abrir el detalle de un prospecto o hallazgo, busca coincidencias
 // por nombre exacto (sin distinguir mayúsculas) en la otra tabla — el
@@ -493,6 +500,54 @@ export async function actualizarProximoToque(contactoId: string, fecha: string |
   revalidatePath(`/dashboard/contactos/${contactoId}`)
   revalidatePath('/dashboard/contactos')
   revalidatePath('/dashboard')
+}
+
+// Fase 1 de la propuesta de Búsquedas ("Datos Desbloqueados"): lo que trae
+// un CSV es de solo lectura hoy — si el comercial detecta un dato mal en
+// terreno, no tiene forma de corregirlo. Un solo action genérico para los
+// campos fijos editables, validado contra una lista explícita en vez de
+// aceptar cualquier nombre de columna del request.
+export async function actualizarCampoContacto(
+  contactoId: string,
+  campo: CampoContactoEditable,
+  valor: string
+) {
+  if (!esCampoContactoEditable(campo)) throw new Error('Ese campo no se puede editar.')
+  const supabase = await createClient()
+  const valorLimpio = limpiarValorCampoContacto(campo, valor)
+
+  const { error } = await supabase
+    .from('contactos')
+    .update({ [campo]: valorLimpio, updated_at: new Date().toISOString() })
+    .eq('id', contactoId)
+  if (error) throw new Error(error.message)
+
+  revalidatePath(`/dashboard/contactos/${contactoId}`)
+  revalidatePath('/dashboard/contactos')
+}
+
+// Segunda pieza de la Fase 1: cargar un contacto que nunca pasó por una
+// importación ni por el bookmarklet (referencia, llamada en frío, evento).
+// prospecto_id/hallazgo_id quedan null — es un contacto "de origen propio".
+export async function crearContactoManual(datos: DatosContactoManual, proyectoId?: string | null) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const limpio = limpiarDatosContactoManual(datos)
+
+  const { data, error } = await supabase
+    .from('contactos')
+    .insert([{ ...limpio, proyecto_id: proyectoId || null, consultor_id: user.id }])
+    .select('id')
+    .single()
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard/contactos')
+  revalidatePath('/dashboard')
+  return data.id as string
 }
 
 export async function registrarToque(

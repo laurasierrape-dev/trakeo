@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import type { Contacto, Proyecto, Toque } from '@/lib/types'
+import { CampoEditable } from './CampoEditable'
 import { TemperaturaSelector } from './TemperaturaSelector'
 import { ProyectoSelector } from './ProyectoSelector'
 import { ProximoToqueForm } from './ProximoToqueForm'
@@ -44,47 +45,44 @@ export default async function ContactoDetailPage({
   ])
 
   const emailContacto = c.email || prospecto?.email || null
-  const tieneDatosContacto = c.representante || c.telefono || emailContacto
   const tieneInfoOrigen =
     !!prospecto && (prospecto.nit || prospecto.sector || prospecto.zona || prospecto.ingresos_miles != null)
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-xl font-semibold flex items-center gap-2" style={{ fontFamily: 'var(--font-display)', color: '#0d2e23' }}>
-        {c.nombre_empresa}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <CampoEditable
+            contactoId={c.id}
+            campo="nombre_empresa"
+            valor={c.nombre_empresa}
+            displayClassName="text-xl font-semibold"
+            displayStyle={{ fontFamily: 'var(--font-display)' }}
+          />
+        </div>
         {c.estado === 'descartado' && (
           <span
-            className="text-xs font-medium rounded-full px-2.5 py-1"
+            className="text-xs font-medium rounded-full px-2.5 py-1 shrink-0"
             style={{ backgroundColor: '#0d2e2310', color: '#b91c1c' }}
           >
             Descartado
           </span>
         )}
-      </h1>
+      </div>
 
-      {tieneDatosContacto ? (
-        <div className="text-sm mt-1 flex flex-col gap-0.5" style={{ color: '#0d2e2380' }}>
-          {c.representante && <span>{c.representante}</span>}
-          {c.telefono && <span>{c.telefono}</span>}
-          {emailContacto && <span>{emailContacto}</span>}
-        </div>
-      ) : (
-        <p className="text-sm mt-1" style={{ color: '#0d2e2350' }}>
-          Sin representante, teléfono ni email todavía.
-        </p>
-      )}
+      <div className="text-sm mt-1 flex flex-col gap-0.5 max-w-sm" style={{ color: '#0d2e2380' }}>
+        <CampoEditable contactoId={c.id} campo="representante" valor={c.representante} placeholder="Agregar representante..." />
+        <CampoEditable contactoId={c.id} campo="telefono" valor={c.telefono} placeholder="Agregar teléfono..." />
+        <CampoEditable contactoId={c.id} campo="email" valor={emailContacto} placeholder="Agregar email..." />
+      </div>
 
-      {c.descripcion && (
-        <p className="text-sm mt-3 max-w-lg" style={{ color: '#0d2e2370' }}>
-          {c.descripcion}
-        </p>
-      )}
+      <div className="mt-3 max-w-lg text-sm" style={{ color: '#0d2e2370' }}>
+        <CampoEditable contactoId={c.id} campo="descripcion" valor={c.descripcion} placeholder="Agregar descripción..." multiline />
+      </div>
 
-      {c.notas && (
-        <p className="text-sm mt-2 max-w-lg" style={{ color: '#0d2e2370' }}>
-          {c.notas}
-        </p>
-      )}
+      <div className="mt-2 max-w-lg text-sm" style={{ color: '#0d2e2370' }}>
+        <CampoEditable contactoId={c.id} campo="notas" valor={c.notas} placeholder="Agregar notas..." multiline />
+      </div>
 
       {tieneInfoOrigen && (
         <div
