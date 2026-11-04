@@ -1,15 +1,23 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Hallazgo, Proyecto } from '@/lib/types'
 import { BandejaList } from './BandejaList'
-import { obtenerProspectosSinRevisarPaginados, parsearPaginacion } from '@/lib/colaRevision'
+import {
+  obtenerOpcionesFacetas,
+  obtenerProspectosSinRevisarPaginados,
+  parsearFiltrosFacetas,
+  parsearPaginacion,
+} from '@/lib/colaRevision'
+import { obtenerCamposPersonalizados } from '../prospectos/camposActions'
 
 export default async function BandejaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ pagina?: string; tamano?: string }>
+  searchParams: Promise<{ pagina?: string; tamano?: string; [clave: string]: string | string[] | undefined }>
 }) {
   const supabase = await createClient()
-  const { pagina, tamano } = parsearPaginacion(await searchParams)
+  const paramsResueltos = await searchParams
+  const { pagina, tamano } = parsearPaginacion(paramsResueltos)
+  const filtros = parsearFiltrosFacetas(paramsResueltos)
 
   // El estado de un prospecto (aprobado/descartado) es por consultor — ver
   // 0011_prospectos_estado_por_consultor.sql. RLS limita la consulta a
@@ -19,8 +27,9 @@ export default async function BandejaPage({
     { data: hallazgos },
     { data: proyectos },
     { data: busquedas },
+    camposPersonalizados,
   ] = await Promise.all([
-    obtenerProspectosSinRevisarPaginados(supabase, pagina, tamano),
+    obtenerProspectosSinRevisarPaginados(supabase, pagina, tamano, filtros),
     supabase
       .from('hallazgos')
       .select('*')
@@ -31,7 +40,10 @@ export default async function BandejaPage({
     // necesaria para resolver el nombre de búsquedas de otros consultores
     // sobre prospectos del pozo común.
     supabase.from('busquedas').select('id, nombre'),
+    obtenerCamposPersonalizados(),
   ])
+
+  const opcionesFacetas = await obtenerOpcionesFacetas(supabase, camposPersonalizados)
 
   const nombresBusqueda = new Map((busquedas ?? []).map(b => [b.id, b.nombre]))
 
@@ -53,6 +65,8 @@ export default async function BandejaPage({
         hallazgos={(hallazgos as Hallazgo[] | null) ?? []}
         proyectos={(proyectos as Proyecto[] | null) ?? []}
         nombresBusqueda={Object.fromEntries(nombresBusqueda)}
+        opcionesFacetas={opcionesFacetas}
+        filtrosFacetas={filtros}
       />
     </div>
   )

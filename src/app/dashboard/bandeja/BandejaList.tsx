@@ -24,7 +24,9 @@ import {
   tablaCellStyle,
 } from '@/lib/tableStyles'
 import type { Hallazgo, Prospecto, Proyecto } from '@/lib/types'
+import type { FiltrosFacetas, OpcionesFacetas } from '@/lib/colaRevision'
 import { Paginador } from './Paginador'
+import { FiltrosFacetados } from './FiltrosFacetados'
 
 const selectStyle = {
   backgroundColor: 'white',
@@ -54,6 +56,8 @@ export function BandejaList({
   paginaProspectos = 1,
   tamanoProspectos = prospectos.length,
   totalProspectos = prospectos.length,
+  opcionesFacetas,
+  filtrosFacetas,
 }: {
   prospectos: Prospecto[]
   hallazgos: Hallazgo[]
@@ -65,6 +69,11 @@ export function BandejaList({
   paginaProspectos?: number
   tamanoProspectos?: number
   totalProspectos?: number
+  // Filtros facetados (Fase 3) — solo aplican a prospectos (hallazgos no
+  // tiene sector/zona/campos dinámicos). `prospectos` ya llega filtrado por
+  // el servidor; estos dos props solo alimentan la barra de filtros.
+  opcionesFacetas?: OpcionesFacetas
+  filtrosFacetas?: FiltrosFacetas
 }) {
   const hayPaginacion = totalProspectos > prospectos.length
   // El nombre de la búsqueda real (ej. "Alimentos en Bogotá") reemplaza la
@@ -165,6 +174,10 @@ export function BandejaList({
   return (
     <div>
       <ChatFiltro items={items} onResultado={ids => setIdsIA(ids ? new Set(ids) : null)} />
+
+      {opcionesFacetas && filtrosFacetas && (
+        <FiltrosFacetados opciones={opcionesFacetas} filtros={filtrosFacetas} />
+      )}
 
       <div className="flex flex-wrap gap-2 mb-4">
         <input
