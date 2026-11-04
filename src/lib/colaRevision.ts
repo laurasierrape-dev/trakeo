@@ -161,8 +161,13 @@ export async function obtenerOpcionesFacetas(
     if (p.zona) zonas.add(p.zona)
     if (p.datos_extra) {
       for (const [campo, valor] of Object.entries(p.datos_extra)) {
-        if (!valor) continue
-        if (!dinamicos.has(campo)) dinamicos.set(campo, new Set())
+        // Solo se ofrecen como filtro los campos ya registrados en
+        // campos_personalizados (Fase 2) — datos_extra también puede traer
+        // llaves crudas de importaciones previas a esa fase (ej. "__EMPTY"
+        // de una celda vacía mal parseada, o columnas de un export que
+        // nadie confirmó mapear), que no son campos reales y solo
+        // ensuciarían la barra de filtros.
+        if (!valor || !dinamicos.has(campo)) continue
         dinamicos.get(campo)!.add(valor)
       }
     }
